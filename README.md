@@ -1,4 +1,4 @@
-# Dynamic Mouse Scroll
+# Silky Scroll
 A wrapper for scrollable widgets that enables smooth scrolling with a mouse on all platforms.
 
 First gif: Scrolling slowly.  
