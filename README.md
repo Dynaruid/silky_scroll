@@ -18,7 +18,7 @@ Third gif: Mobile drag scroll detected, physics change.
 * Choose what mobile physics you would like to use.
 ## Basic Usage
 ```dart
-DynMouseScroll(
+SilkyScroll(
   builder: (context, controller, physics) => ListView(
     controller: controller,
     physics: physics,
