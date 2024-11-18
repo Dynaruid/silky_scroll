@@ -1,24 +1,21 @@
-name: dyn_mouse_scroll
-description: A wrapper for scrollable widgets that enables smooth scrolling with a mouse on all platforms.
-version: 1.0.7
-repository: https://github.com/Bluebar1/dyn_mouse_scroll
+name: silky_scroll
+description: "Silky Scroll은 Flutter에서 부드러운 스크롤 경험을 제공하기 위해 개발된 패키지입니다."
+version: 0.0.1
+homepage: https://github.com/Dynaruid/silky_scroll
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
-  flutter: ">=1.16.0"
+  sdk: ^3.5.4
+  flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.0.3
-  universal_io: ^2.0.4
+  provider: ^6.1.2
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
 
-
-
-
- 
+flutter:
