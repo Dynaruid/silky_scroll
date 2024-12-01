@@ -31,7 +31,7 @@ class SilkyScrollState with ChangeNotifier {
   final bool isVertical;
   final Duration edgeLockingDelay;
   double lastDelta = 0;
-  Timer scrollDisableTimer = Timer(Duration.zero, () {});
+  Timer scrollSetDisableTimer = Timer(Duration.zero, () {});
   Timer scrollEnableTimer = Timer(Duration.zero, () {});
 
   SilkyScrollState({
@@ -112,11 +112,11 @@ class SilkyScrollState with ChangeNotifier {
     //트랙패드는 마우스와 동일
     lastDelta += delta;
 
-    if (scrollDisableTimer.isActive) {
+    if (scrollSetDisableTimer.isActive) {
       return;
     } else {
-      scrollDisableTimer =
-          Timer(const Duration(milliseconds: 60), checkNeedLocking);
+      scrollSetDisableTimer =
+          Timer(const Duration(milliseconds: 90), checkNeedLocking);
     }
   }
 
@@ -239,7 +239,7 @@ class SilkyScrollState with ChangeNotifier {
 
   void setWidgetScrollPhysics({required ScrollPhysics scrollPhysics}) {
     scrollEnableTimer.cancel();
-    scrollDisableTimer.cancel();
+    scrollSetDisableTimer.cancel();
     widgetScrollPhysics = scrollPhysics;
     currentScrollPhysics = scrollPhysics;
     notifyListeners();
@@ -255,7 +255,7 @@ class SilkyScrollState with ChangeNotifier {
 
   @override
   void dispose() {
-    scrollDisableTimer.cancel();
+    scrollSetDisableTimer.cancel();
     scrollEnableTimer.cancel();
     isAlive = false;
     clientController.removeListener(onScrollUpdate);
