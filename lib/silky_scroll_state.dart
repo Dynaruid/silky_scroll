@@ -15,7 +15,7 @@ class SilkyScrollState with ChangeNotifier {
   final UniqueKey pointKey = UniqueKey();
   double futurePosition = 0;
   final Curve animationCurve;
-  final int durationMS;
+  final Duration silkyScrollDuration;
   late final int recoilDurationMS;
   late final bool isPlatformBouncingScrollPhysics;
   late ScrollPhysics widgetScrollPhysics;
@@ -38,7 +38,7 @@ class SilkyScrollState with ChangeNotifier {
     ScrollController? scrollController,
     this.widgetScrollPhysics = const ScrollPhysics(),
     required this.edgeLockingDelay,
-    required this.durationMS,
+    required this.silkyScrollDuration,
     required this.animationCurve,
     required this.isVertical,
     required Function(PointerDeviceKind)? setManualPointerDeviceKind,
@@ -65,7 +65,7 @@ class SilkyScrollState with ChangeNotifier {
         SilkyScrollController(clientController: clientController);
 
     clientController.addListener(onScrollUpdate);
-    recoilDurationMS = (durationMS * 0.8).toInt();
+    recoilDurationMS = (silkyScrollDuration.inMilliseconds * 0.8).toInt();
     if (setManualPointerDeviceKind == null) {
       setPointerDeviceKind = silkyScrollController.setPointerDeviceKind;
     } else {
@@ -179,25 +179,27 @@ class SilkyScrollState with ChangeNotifier {
       futurePosition = futurePosition + (scrollDelta * scrollSpeed * 0.5);
     }
 
-    final int duration;
+    final Duration duration;
     if (futurePosition > clientController.position.maxScrollExtent) {
       futurePosition = isPlatformBouncingScrollPhysics
           ? min(clientController.position.maxScrollExtent + 150, futurePosition)
           : clientController.position.maxScrollExtent;
-      duration = durationMS ~/ 2;
+      duration =
+          Duration(milliseconds: silkyScrollDuration.inMilliseconds ~/ 2);
     } else if (futurePosition < clientController.position.minScrollExtent) {
       futurePosition = isPlatformBouncingScrollPhysics
           ? max(clientController.position.minScrollExtent - 150, futurePosition)
           : clientController.position.minScrollExtent;
-      duration = durationMS ~/ 2;
+      duration =
+          Duration(milliseconds: silkyScrollDuration.inMilliseconds ~/ 2);
     } else {
-      duration = durationMS;
+      duration = silkyScrollDuration;
     }
     isOnSilkyScrolling = true;
     final Future<void> animationEnd =
         _animationEnd = clientController.animateTo(
       futurePosition,
-      duration: Duration(milliseconds: duration),
+      duration: duration,
       curve: animationCurve,
     );
     animationEnd.whenComplete(() {

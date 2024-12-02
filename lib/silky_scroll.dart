@@ -8,7 +8,7 @@ import 'silky_scroll_state.dart';
 
 class SilkyScroll extends StatefulWidget {
   final ScrollController? controller;
-  final int durationMS;
+  final Duration silkyScrollDuration;
   final double scrollSpeed;
   final Curve animationCurve;
   final Axis direction;
@@ -21,7 +21,7 @@ class SilkyScroll extends StatefulWidget {
   const SilkyScroll({
     super.key,
     this.controller,
-    this.durationMS = 350,
+    this.silkyScrollDuration = const Duration(milliseconds: 700),
     this.scrollSpeed = 1,
     this.animationCurve = Curves.easeOutQuart,
     this.direction = Axis.vertical,
@@ -47,7 +47,7 @@ class _SilkyScrollState extends State<SilkyScroll> {
     silkyScrollState = SilkyScrollState(
         scrollController: widget.controller,
         widgetScrollPhysics: widget.physics,
-        durationMS: widget.durationMS,
+        silkyScrollDuration: widget.silkyScrollDuration,
         animationCurve: widget.animationCurve,
         edgeLockingDelay: widget.edgeLockingDelay,
         setManualPointerDeviceKind: widget.setManualPointerDeviceKind,

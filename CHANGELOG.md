@@ -6,3 +6,5 @@
 * TODO: add web supports.
 ## 1.0.3
 * TODO: adjusted the interval of the scroll lock timer.
+## 1.0.4
+* TODO: changed the method of specifying the scroll duration.
