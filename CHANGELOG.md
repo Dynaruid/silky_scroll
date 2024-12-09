@@ -27,3 +27,7 @@
 ## 1.0.6
 
 * TODO: The duration of scroll momentum transferred to the parent widget has been adjusted to behave more naturally.
+
+## 1.0.7
+
+* TODO: adjusted duration of scroll momentum.

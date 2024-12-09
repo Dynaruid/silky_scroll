@@ -129,7 +129,7 @@ class SilkyScrollState with ChangeNotifier {
       futurePosition = min(max(0, futurePosition + delta),
           silkyScrollController.position.maxScrollExtent);
       final Duration duration =
-          Duration(milliseconds: max(80, ((delta.abs() / 120) * 200).toInt()));
+          Duration(milliseconds: max(150, ((delta.abs() / 90) * 200).toInt()));
 
       clientController.animateTo(
         futurePosition,
