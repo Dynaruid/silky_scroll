@@ -34,8 +34,10 @@ class SilkyScrollState with ChangeNotifier {
   final bool isVertical;
   final Duration edgeLockingDelay;
   final double scrollSpeed;
+
   double lastDelta = 0;
-  double lastOffset = 0;
+
+  //double lastOffset = 0;
   Timer scrollSetDisableTimer = Timer(Duration.zero, () {});
   Timer scrollEnableTimer = Timer(Duration.zero, () {});
   final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
@@ -84,11 +86,12 @@ class SilkyScrollState with ChangeNotifier {
   }
 
   void checkNeedLocking() {
-    if (isAlive == false) {
+    if (isAlive == false ||
+        clientController.hasClients == false ||
+        lastDelta.toInt() == 0) {
       return;
     }
     final double delta;
-
     if (lastDelta.isNegative) {
       delta = -1;
     } else {
@@ -96,31 +99,22 @@ class SilkyScrollState with ChangeNotifier {
     }
 
     if (checkOffsetAtEdge(delta, clientController)) {
-      if (currentScrollPhysics != kDisableScrollPhysics) {
+      if ((currentScrollPhysics is NeverScrollableScrollPhysics) == false) {
         scrollEnableTimer.cancel();
         currentScrollPhysics = kDisableScrollPhysics;
         notifyListeners();
         scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
         if (clientController.position.maxScrollExtent.toInt() != 0) {
-          if (currentScrollPhysics == kDisableScrollPhysics) {
-            // if (isDebug) {
-            //   print(lastDelta);
-            // }
-            if (parentSilkyScrollState != null) {
-              parentSilkyScrollState!
-                  .manualHandleScroll(lastDelta * 1.2, isVertical);
-            }
-            lastDelta = 0;
-            return;
+          if (parentSilkyScrollState != null) {
+            parentSilkyScrollState!
+                .manualHandleScroll(lastDelta * 1.2, isVertical);
           }
+          lastDelta = 0;
+          return;
         }
       }
     }
-    // else {
-    //   if (lastOffset.toInt() != clientController.offset.toInt()) {
-    //     silkyScrollMousePointerManager.enteredKey(pointKey);
-    //   }
-    // }
+
     lastDelta = 0;
   }
 
@@ -130,12 +124,16 @@ class SilkyScrollState with ChangeNotifier {
     }
     if ((currentScrollPhysics is NeverScrollableScrollPhysics) == false &&
         callIsVertical == isVertical) {
+      //print(delta);
+
       futurePosition = min(max(0, futurePosition + delta),
           silkyScrollController.position.maxScrollExtent);
+      final Duration duration =
+          Duration(milliseconds: max(80, ((delta.abs() / 120) * 200).toInt()));
 
       clientController.animateTo(
         futurePosition,
-        duration: const Duration(milliseconds: 300),
+        duration: duration,
         curve: Curves.easeOutQuad,
       );
       //silkyScrollMousePointerManager.enteredKey(pointKey);
@@ -192,9 +190,9 @@ class SilkyScrollState with ChangeNotifier {
   }
 
   void handleTouchScroll(double delta) {
-    if (currentScrollPhysics is NeverScrollableScrollPhysics) {
-      return;
-    }
+    // if (currentScrollPhysics is NeverScrollableScrollPhysics) {
+    //   return;
+    // }
     //터치스크롤의 델타는 마우스와 반대
     //트랙패드는 마우스와 동일
     lastDelta += delta;
@@ -202,7 +200,7 @@ class SilkyScrollState with ChangeNotifier {
     if (scrollSetDisableTimer.isActive) {
       return;
     } else {
-      lastOffset = clientController.offset;
+      //lastOffset = clientController.offset;
       scrollSetDisableTimer =
           Timer(const Duration(milliseconds: 90), checkNeedLocking);
     }
