@@ -31,3 +31,7 @@
 ## 1.0.7
 
 * TODO: adjusted duration of scroll momentum.
+
+## 1.0.8
+
+* TODO: adjusted duration of scroll momentum.

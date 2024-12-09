@@ -34,7 +34,6 @@ class SilkyScrollState with ChangeNotifier {
   final bool isVertical;
   final Duration edgeLockingDelay;
   final double scrollSpeed;
-
   double lastDelta = 0;
 
   //double lastOffset = 0;
@@ -42,6 +41,7 @@ class SilkyScrollState with ChangeNotifier {
   Timer scrollEnableTimer = Timer(Duration.zero, () {});
   final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
   SilkyScrollState? parentSilkyScrollState;
+  bool _isInnerScrollNegative = true;
 
   SilkyScrollState(
       {ScrollController? scrollController,
@@ -107,7 +107,7 @@ class SilkyScrollState with ChangeNotifier {
         if (clientController.position.maxScrollExtent.toInt() != 0) {
           if (parentSilkyScrollState != null) {
             parentSilkyScrollState!
-                .manualHandleScroll(lastDelta * 1.2, isVertical);
+                .manualHandleScroll(lastDelta * 2.8, isVertical);
           }
           lastDelta = 0;
           return;
@@ -118,6 +118,34 @@ class SilkyScrollState with ChangeNotifier {
     lastDelta = 0;
   }
 
+  // void decelerationManualHandleScroll(double delta) {
+  //   futurePosition = min(max(0, futurePosition + delta),
+  //       clientController.position.maxScrollExtent);
+  //   final Duration duration = Duration(
+  //       milliseconds: min(1000, max(150, ((delta.abs() / 60) * 200).toInt())));
+  //   clientController.animateTo(
+  //     futurePosition,
+  //     duration: duration,
+  //     curve: Curves.easeOut,
+  //   );
+  //   print(delta);
+  //   const double decelerationRatio = 0.7;
+  //   final double deceleratedDelta = delta * decelerationRatio;
+  //
+  //   // final Duration deceleratedDuration = Duration(
+  //   //     milliseconds:
+  //   //         (duration.inMilliseconds * decelerationRatio).toInt() + 1);
+  //
+  //   if (_isInnerScrollNegative == delta.isNegative &&
+  //       deceleratedDelta.toInt().abs() > 10) {
+  //     Future.delayed(Duration(milliseconds: 100), () {
+  //       decelerationManualHandleScroll(
+  //         deceleratedDelta,
+  //       );
+  //     });
+  //   }
+  // }
+
   void manualHandleScroll(double delta, bool callIsVertical) {
     if (isAlive == false) {
       return;
@@ -125,18 +153,24 @@ class SilkyScrollState with ChangeNotifier {
     if ((currentScrollPhysics is NeverScrollableScrollPhysics) == false &&
         callIsVertical == isVertical) {
       //print(delta);
+      if (delta.isNegative == _isInnerScrollNegative) {
+        futurePosition = min(max(0, futurePosition + delta),
+            clientController.position.maxScrollExtent);
+      } else {
+        _isInnerScrollNegative = delta.isNegative;
+        futurePosition = min(max(0, clientController.offset + delta),
+            clientController.position.maxScrollExtent);
+      }
 
-      futurePosition = min(max(0, futurePosition + delta),
-          silkyScrollController.position.maxScrollExtent);
-      final Duration duration =
-          Duration(milliseconds: max(150, ((delta.abs() / 90) * 200).toInt()));
-
+      //decelerationManualHandleScroll(delta);
+      final Duration duration = Duration(
+          milliseconds:
+              min(800, max(150, ((delta.abs() / 120) * 300).toInt())));
       clientController.animateTo(
         futurePosition,
         duration: duration,
         curve: Curves.easeOutQuad,
       );
-      //silkyScrollMousePointerManager.enteredKey(pointKey);
     } else {
       if (parentSilkyScrollState != null) {
         parentSilkyScrollState!.manualHandleScroll(delta, callIsVertical);
@@ -190,9 +224,6 @@ class SilkyScrollState with ChangeNotifier {
   }
 
   void handleTouchScroll(double delta) {
-    // if (currentScrollPhysics is NeverScrollableScrollPhysics) {
-    //   return;
-    // }
     //터치스크롤의 델타는 마우스와 반대
     //트랙패드는 마우스와 동일
     lastDelta += delta;
@@ -200,7 +231,6 @@ class SilkyScrollState with ChangeNotifier {
     if (scrollSetDisableTimer.isActive) {
       return;
     } else {
-      //lastOffset = clientController.offset;
       scrollSetDisableTimer =
           Timer(const Duration(milliseconds: 90), checkNeedLocking);
     }
