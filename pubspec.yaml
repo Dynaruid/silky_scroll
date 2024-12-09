@@ -1,7 +1,7 @@
 name: silky_scroll
 description: "Silky Scroll은 Flutter에서 부드러운 스크롤 경험을 제공하기 위해 개발된 패키지입니다. 
 Silky Scroll is a package developed in Flutter to provide a smooth scrolling experience."
-version: 1.0.6
+version: 1.0.7
 homepage: https://github.com/Dynaruid/silky_scroll
 
 environment:
