@@ -42,6 +42,9 @@ class SilkyScrollMousePointerManager {
   }
 
   void enteredKey(UniqueKey key) {
+    if (keyStack.contains(key)) {
+      keyStack.remove(key);
+    }
     keyStack.add(key);
   }
 

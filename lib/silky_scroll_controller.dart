@@ -37,6 +37,7 @@ class SilkyScrollController extends ScrollController {
     clientController.detach(position);
     super.detach(position);
   }
+
 }
 
 class SilkyScrollPosition extends ScrollPositionWithSingleContext {
@@ -53,7 +54,9 @@ class SilkyScrollPosition extends ScrollPositionWithSingleContext {
   void pointerScroll(double delta) {
     if (kind != PointerDeviceKind.mouse) {
       super.pointerScroll(delta);
+
       return;
     }
   }
+
 }

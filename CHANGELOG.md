@@ -8,3 +8,5 @@
 * TODO: adjusted the interval of the scroll lock timer.
 ## 1.0.4
 * TODO: changed the method of specifying the scroll duration.
+## 1.0.5
+* TODO: Enhanced scroll behavior for touch interfaces. When the scrollable content reaches the edge during an ongoing scroll gesture, if the parent widget is also scrollable, the scroll momentum is seamlessly transferred to the parent widget.
