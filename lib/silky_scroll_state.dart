@@ -6,7 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'silky_scroll_mouse_pointer_manager.dart';
 import 'silky_scroll_controller.dart';
-import 'BlockedScrollPhysics.dart';
+import 'blocked_scroll_physics.dart';
 
 class SilkyScrollState with ChangeNotifier {
   bool isAlive = true;
@@ -117,34 +117,6 @@ class SilkyScrollState with ChangeNotifier {
 
     lastDelta = 0;
   }
-
-  // void decelerationManualHandleScroll(double delta) {
-  //   futurePosition = min(max(0, futurePosition + delta),
-  //       clientController.position.maxScrollExtent);
-  //   final Duration duration = Duration(
-  //       milliseconds: min(1000, max(150, ((delta.abs() / 60) * 200).toInt())));
-  //   clientController.animateTo(
-  //     futurePosition,
-  //     duration: duration,
-  //     curve: Curves.easeOut,
-  //   );
-  //   print(delta);
-  //   const double decelerationRatio = 0.7;
-  //   final double deceleratedDelta = delta * decelerationRatio;
-  //
-  //   // final Duration deceleratedDuration = Duration(
-  //   //     milliseconds:
-  //   //         (duration.inMilliseconds * decelerationRatio).toInt() + 1);
-  //
-  //   if (_isInnerScrollNegative == delta.isNegative &&
-  //       deceleratedDelta.toInt().abs() > 10) {
-  //     Future.delayed(Duration(milliseconds: 100), () {
-  //       decelerationManualHandleScroll(
-  //         deceleratedDelta,
-  //       );
-  //     });
-  //   }
-  // }
 
   void manualHandleScroll(double delta, bool callIsVertical) {
     if (isAlive == false) {
@@ -368,8 +340,6 @@ class SilkyScrollState with ChangeNotifier {
       futurePosition = clientController.offset;
     }
   }
-
-  //void emptyCallback() {}
 
   @override
   void dispose() {

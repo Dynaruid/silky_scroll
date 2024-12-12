@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:web/web.dart' as web;
-import 'SilkyScrollWebManagerAbstract.dart';
+import 'silky_scroll_web_helper_interface.dart';
 
-class SilkyScrollWebManager extends SilkyScrollWebManagerAbstract {
+class SilkyScrollWebManager extends SilkyScrollWebManagerInterface {
   SilkyScrollWebManager() {
     rootBodyElement = web.window.document.body;
   }
-
+  Timer overscrollBehaviorXTimer = Timer(Duration.zero, () {});
   late final web.HTMLElement? rootBodyElement;
 
   void resetOverscrollBehaviorX() {

@@ -1,15 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'silkyScrollWebManager/SilkyScrollNonWebManager.dart'
-    if (dart.library.js) 'silkyScrollWebManager/SilkyScrollWebManager.dart';
+import 'silky_scroll_web_helper/silky_scroll_non_web_helper.dart'
+    if (dart.library.js) 'silkyScrollWebManager/silky_scroll_web_helper.dart';
 
 class SilkyScrollMousePointerManager {
   static final SilkyScrollMousePointerManager _instance =
       SilkyScrollMousePointerManager._internal();
 
   SilkyScrollMousePointerManager._internal() {
-    isRunningOnWeb = kIsWeb;
     silkyScrollWebManager = SilkyScrollWebManager();
   }
 
@@ -19,7 +18,6 @@ class SilkyScrollMousePointerManager {
 
   UniqueKey? reserveKey;
   final List<UniqueKey> keyStack = [];
-  late final bool isRunningOnWeb;
   late final SilkyScrollWebManager silkyScrollWebManager;
   Timer trackpadCheckTimer = Timer(Duration.zero, () {});
   Timer mouseCheckTimer = Timer(Duration.zero, () {});

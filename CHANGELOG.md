@@ -43,3 +43,7 @@
 ## 1.0.10
 
 * TODO: updated README.
+
+## 1.0.11
+
+* TODO: updated.
