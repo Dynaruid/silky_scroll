@@ -45,13 +45,6 @@ class _ScrollExampleState extends State<ScrollExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme
-              .of(context)
-              .colorScheme
-              .inversePrimary,
-          title: Text(widget.title),
-        ),
         body: SilkyScroll(
             controller: _scrollController,
             physics: const BouncingScrollPhysics(),
