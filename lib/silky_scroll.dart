@@ -89,8 +89,6 @@ class _SilkyScrollState extends State<SilkyScroll> {
     return ChangeNotifierProvider.value(
       value: silkyScrollState,
       builder: (BuildContext context, Widget? child) {
-        //final controller = silkyScrollState.silkyScrollController;
-
         context.select((SilkyScrollState state) => state.widgetScrollPhysics);
         final currentPhysics = context
             .select((SilkyScrollState state) => state.currentScrollPhysics);
@@ -136,9 +134,12 @@ class _SilkyScrollState extends State<SilkyScroll> {
                 }
               },
               onPointerMove: (PointerMoveEvent event) {
-                silkyScrollState.setPointerDeviceKind(PointerDeviceKind.touch);
-                silkyScrollState.triggerTouchAction(
-                    event.delta, PointerDeviceKind.touch);
+                if (event.kind == PointerDeviceKind.touch) {
+                  silkyScrollState
+                      .setPointerDeviceKind(PointerDeviceKind.touch);
+                  silkyScrollState.triggerTouchAction(
+                      event.delta, PointerDeviceKind.touch);
+                }
               },
               onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
                 silkyScrollState.triggerTouchAction(
