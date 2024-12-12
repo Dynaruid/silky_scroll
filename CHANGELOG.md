@@ -39,3 +39,7 @@
 ## 1.0.9
 
 * TODO: fixed drag bug.
+
+## 1.0.10
+
+* TODO: updated README.
