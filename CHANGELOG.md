@@ -47,3 +47,8 @@
 ## 1.0.11
 
 * TODO: updated.
+
+## 1.0.12
+
+* TODO: Added an option to configure whether scroll bubbling is propagated when an inner scroll view reaches its edge
+  within nested scroll views.

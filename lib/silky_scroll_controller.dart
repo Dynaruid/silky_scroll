@@ -37,7 +37,6 @@ class SilkyScrollController extends ScrollController {
     clientController.detach(position);
     super.detach(position);
   }
-
 }
 
 class SilkyScrollPosition extends ScrollPositionWithSingleContext {
@@ -58,5 +57,4 @@ class SilkyScrollPosition extends ScrollPositionWithSingleContext {
       return;
     }
   }
-
 }

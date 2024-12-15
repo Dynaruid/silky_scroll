@@ -19,14 +19,15 @@ class SilkyScrollState with ChangeNotifier {
   final Duration silkyScrollDuration;
   late final int recoilDurationMS;
   late final bool isPlatformBouncingScrollPhysics;
+  late ScrollPhysics currentScrollPhysics;
   late ScrollPhysics widgetScrollPhysics;
   final BlockedScrollPhysics kDisableScrollPhysics =
       const BlockedScrollPhysics();
+  final bool isNeedScrollEventBubbling;
   final void Function(double delta)? scrollCallback;
   late final Function(PointerDeviceKind) setPointerDeviceKind;
   final bool isDebug;
 
-  late ScrollPhysics currentScrollPhysics;
   bool prevDeltaPositive = false;
   Future<void>? _animationEnd;
   bool isOnSilkyScrolling = false;
@@ -35,26 +36,28 @@ class SilkyScrollState with ChangeNotifier {
   final Duration edgeLockingDelay;
   final double scrollSpeed;
   double lastDelta = 0;
-
-  //double lastOffset = 0;
   Timer scrollSetDisableTimer = Timer(Duration.zero, () {});
   Timer scrollEnableTimer = Timer(Duration.zero, () {});
   final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
   SilkyScrollState? parentSilkyScrollState;
   bool _isInnerScrollNegative = true;
 
-  SilkyScrollState(
-      {ScrollController? scrollController,
-      this.widgetScrollPhysics = const ScrollPhysics(),
-      required this.edgeLockingDelay,
-      required this.scrollSpeed,
-      required this.silkyScrollDuration,
-      required this.animationCurve,
-      required this.isVertical,
-      this.scrollCallback,
-      required Function(PointerDeviceKind)? setManualPointerDeviceKind,
-      required this.silkyScrollMousePointerManager,
-      required this.isDebug}) {
+  //VoidCallback? reserveCallbackScrollOnEdge;
+
+  SilkyScrollState({
+    ScrollController? scrollController,
+    this.widgetScrollPhysics = const ScrollPhysics(),
+    required this.edgeLockingDelay,
+    required this.scrollSpeed,
+    required this.silkyScrollDuration,
+    required this.animationCurve,
+    required this.isVertical,
+    required this.isNeedScrollEventBubbling,
+    required this.isDebug,
+    this.scrollCallback,
+    required Function(PointerDeviceKind)? setManualPointerDeviceKind,
+    required this.silkyScrollMousePointerManager,
+  }) {
     currentScrollPhysics = widgetScrollPhysics;
     try {
       if (Platform.isMacOS || Platform.isIOS) {
@@ -97,23 +100,55 @@ class SilkyScrollState with ChangeNotifier {
     } else {
       delta = 1;
     }
-
-    if (checkOffsetAtEdge(delta, clientController)) {
-      if ((currentScrollPhysics is NeverScrollableScrollPhysics) == false) {
+    if (clientController.position.maxScrollExtent.toInt() == 0) {
+      lastDelta = 0;
+      return;
+    }
+    final int checkedOffsetAtEdge = checkOffsetAtEdge(delta, clientController);
+    if (checkedOffsetAtEdge != 0) {
+      if ((currentScrollPhysics is BlockedScrollPhysics) == false) {
         scrollEnableTimer.cancel();
         currentScrollPhysics = kDisableScrollPhysics;
         notifyListeners();
         scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
-        if (clientController.position.maxScrollExtent.toInt() != 0) {
-          if (parentSilkyScrollState != null) {
-            parentSilkyScrollState!
-                .manualHandleScroll(lastDelta * 2.8, isVertical);
-          }
-          lastDelta = 0;
-          return;
+
+        // if (currentScrollPhysics is BouncingScrollPhysics) {
+        //   reserveCallbackScrollOnEdge = () {
+        //     final int offset = clientController.offset.toInt();
+        //     if (offset > -10) {
+        //       reserveCallbackScrollOnEdge = null;
+        //       currentScrollPhysics = BlockedScrollPhysics(
+        //           parent: currentScrollPhysics); //kDisableScrollPhysics;
+        //       notifyListeners();
+        //       scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
+        //     } else if (offset <
+        //         clientController.position.maxScrollExtent + 10) {
+        //       reserveCallbackScrollOnEdge = null;
+        //       currentScrollPhysics =
+        //           BlockedScrollPhysics(parent: currentScrollPhysics);
+        //       notifyListeners();
+        //       scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
+        //     }
+        //   };
+        // } else {
+        //   currentScrollPhysics = kDisableScrollPhysics;
+        //   notifyListeners();
+        //   scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
+        // }
+
+        if (parentSilkyScrollState != null && isNeedScrollEventBubbling) {
+          parentSilkyScrollState!
+              .manualHandleScroll(lastDelta * 2.8, isVertical);
         }
+
+        lastDelta = 0;
+        return;
       }
     }
+    // else {
+    //   reserveCallbackScrollOnEdge = null;
+    //   currentScrollPhysics = widgetScrollPhysics;
+    // }
 
     lastDelta = 0;
   }
@@ -137,7 +172,7 @@ class SilkyScrollState with ChangeNotifier {
       //decelerationManualHandleScroll(delta);
       final Duration duration = Duration(
           milliseconds:
-              min(800, max(150, ((delta.abs() / 120) * 300).toInt())));
+              min(800, max(250, ((delta.abs() / 150) * 250).toInt())));
       clientController.animateTo(
         futurePosition,
         duration: duration,
@@ -186,20 +221,24 @@ class SilkyScrollState with ChangeNotifier {
   }
 
   void unlockScroll() {
-    WidgetsBinding.instance.scheduleFrame();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isAlive) {
-        currentScrollPhysics = widgetScrollPhysics;
-        notifyListeners();
-      }
-    });
+    if (isAlive) {
+      currentScrollPhysics = widgetScrollPhysics;
+      notifyListeners();
+    }
+    // WidgetsBinding.instance.scheduleFrame();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (isAlive) {
+    //     currentScrollPhysics = widgetScrollPhysics;
+    //     notifyListeners();
+    //   }
+    // });
   }
 
   void handleTouchScroll(double delta) {
     //터치스크롤의 델타는 마우스와 반대
     //트랙패드는 마우스와 동일
-    lastDelta += delta;
 
+    lastDelta += delta;
     if (scrollSetDisableTimer.isActive) {
       return;
     } else {
@@ -222,8 +261,8 @@ class SilkyScrollState with ChangeNotifier {
     }
     final double scrollDelta = delta;
     final bool needBlocking;
-    final bool isEdge = checkOffsetAtEdge(scrollDelta, clientController);
-    if (widgetScrollPhysics is NeverScrollableScrollPhysics) {
+    final bool isEdge = checkOffsetAtEdge(scrollDelta, clientController) != 0;
+    if (widgetScrollPhysics is BlockedScrollPhysics) {
       needBlocking = true;
     } else {
       needBlocking = isEdge;
@@ -338,6 +377,9 @@ class SilkyScrollState with ChangeNotifier {
   void onScrollUpdate() {
     if (isOnSilkyScrolling == false) {
       futurePosition = clientController.offset;
+      // if (reserveCallbackScrollOnEdge != null) {
+      //   reserveCallbackScrollOnEdge!();
+      // }
     }
   }
 
@@ -357,24 +399,24 @@ class SilkyScrollState with ChangeNotifier {
   }
 }
 
-bool checkOffsetAtEdge(double verticalDelta, ScrollController controller) {
+int checkOffsetAtEdge(double verticalDelta, ScrollController controller) {
   if (controller.hasClients == false) {
-    return false;
+    return 0;
   }
   if (verticalDelta.isNegative) {
     final int dest = (max(verticalDelta, -2) + controller.offset).toInt();
     if (dest < 0) {
-      return true;
+      return -1;
     } else {
-      return false;
+      return 0;
     }
   } else {
     final int dest = (min(verticalDelta, 2) + controller.offset).toInt();
     final int maxScrollExtent = controller.position.maxScrollExtent.toInt();
     if (dest > maxScrollExtent) {
-      return true;
+      return 1;
     } else {
-      return false;
+      return 0;
     }
   }
 }

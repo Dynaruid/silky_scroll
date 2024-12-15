@@ -15,23 +15,26 @@ class SilkyScroll extends StatefulWidget {
   final ScrollPhysics physics;
   final SilkyScrollWidgetBuilder builder;
   final Duration edgeLockingDelay;
+  final bool isNeedScrollEventBubbling;
   final void Function(double delta)? scrollCallback;
   final Function(PointerDeviceKind)? setManualPointerDeviceKind;
   final bool isDebug;
 
-  const SilkyScroll(
-      {super.key,
-      this.controller,
-      this.silkyScrollDuration = const Duration(milliseconds: 700),
-      this.scrollSpeed = 1,
-      this.animationCurve = Curves.easeOutQuart,
-      this.direction = Axis.vertical,
-      this.physics = const ScrollPhysics(),
-      this.edgeLockingDelay = const Duration(milliseconds: 650),
-      this.setManualPointerDeviceKind,
-      this.scrollCallback,
-      required this.builder,
-      this.isDebug = false});
+  const SilkyScroll({
+    super.key,
+    this.controller,
+    this.silkyScrollDuration = const Duration(milliseconds: 700),
+    this.scrollSpeed = 1,
+    this.animationCurve = Curves.easeOutQuart,
+    this.direction = Axis.vertical,
+    this.physics = const ScrollPhysics(),
+    this.edgeLockingDelay = const Duration(milliseconds: 650),
+    this.isNeedScrollEventBubbling = false,
+    this.isDebug = false,
+    this.setManualPointerDeviceKind,
+    this.scrollCallback,
+    required this.builder,
+  });
 
   @override
   State<SilkyScroll> createState() => _SilkyScrollState();
@@ -54,6 +57,7 @@ class _SilkyScrollState extends State<SilkyScroll> {
         scrollSpeed: widget.scrollSpeed,
         setManualPointerDeviceKind: widget.setManualPointerDeviceKind,
         isVertical: widget.direction == Axis.vertical,
+        isNeedScrollEventBubbling: widget.isNeedScrollEventBubbling,
         silkyScrollMousePointerManager: silkyScrollMousePointerManager,
         isDebug: widget.isDebug);
   }
