@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'silky_scroll_web_helper/silky_scroll_non_web_helper.dart'
-    if (dart.library.js) 'silkyScrollWebManager/silky_scroll_web_helper.dart';
+    if (dart.library.js) 'silky_scroll_web_helper/silky_scroll_web_helper.dart';
 
 class SilkyScrollMousePointerManager {
   static final SilkyScrollMousePointerManager _instance =

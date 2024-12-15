@@ -52,3 +52,7 @@
 
 * TODO: Added an option to configure whether scroll bubbling is propagated when an inner scroll view reaches its edge
   within nested scroll views.
+
+## 1.0.13
+
+* TODO: fixed bug about web import.
