@@ -60,3 +60,7 @@
 ## 1.0.14
 
 * TODO: Removed usage of `Platform` from `dart:io` due to compatibility issues causing errors on Safari in iOS 18.2.
+
+## 1.0.15
+
+* TODO: dart format
