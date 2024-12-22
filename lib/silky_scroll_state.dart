@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -59,13 +58,9 @@ class SilkyScrollState with ChangeNotifier {
     required this.silkyScrollMousePointerManager,
   }) {
     currentScrollPhysics = widgetScrollPhysics;
-    try {
-      if (Platform.isMacOS || Platform.isIOS) {
-        isPlatformBouncingScrollPhysics = true;
-      } else {
-        isPlatformBouncingScrollPhysics = false;
-      }
-    } catch (e) {
+    if (widgetScrollPhysics is BouncingScrollPhysics) {
+      isPlatformBouncingScrollPhysics = true;
+    } else {
       isPlatformBouncingScrollPhysics = false;
     }
 
@@ -243,7 +238,7 @@ class SilkyScrollState with ChangeNotifier {
       return;
     } else {
       scrollSetDisableTimer =
-          Timer(const Duration(milliseconds: 90), checkNeedLocking);
+          Timer(const Duration(milliseconds: 80), checkNeedLocking);
     }
   }
 
