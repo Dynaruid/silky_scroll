@@ -15,8 +15,11 @@ class SilkyScrollController extends ScrollController {
   }
 
   @override
-  ScrollPosition createScrollPosition(ScrollPhysics physics,
-      ScrollContext context, ScrollPosition? oldPosition) {
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) {
     currentsSilkyScrollPosition = SilkyScrollPosition(
       physics: physics,
       context: context,

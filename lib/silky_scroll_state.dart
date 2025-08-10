@@ -24,6 +24,7 @@ class SilkyScrollState with ChangeNotifier {
       const BlockedScrollPhysics();
   final bool isNeedScrollEventBubbling;
   final void Function(double delta)? scrollCallback;
+  final void Function(double delta)? onEdgeOverScrollCallback;
   late final Function(PointerDeviceKind) setPointerDeviceKind;
   final bool isDebug;
 
@@ -40,8 +41,9 @@ class SilkyScrollState with ChangeNotifier {
   final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
   SilkyScrollState? parentSilkyScrollState;
   bool _isInnerScrollNegative = true;
+  bool isOverScrolling = false;
 
-  //VoidCallback? reserveCallbackScrollOnEdge;
+  bool isCanLock = false;
 
   SilkyScrollState({
     ScrollController? scrollController,
@@ -54,6 +56,7 @@ class SilkyScrollState with ChangeNotifier {
     required this.isNeedScrollEventBubbling,
     required this.isDebug,
     this.scrollCallback,
+    this.onEdgeOverScrollCallback,
     required Function(PointerDeviceKind)? setManualPointerDeviceKind,
     required this.silkyScrollMousePointerManager,
   }) {
@@ -71,8 +74,9 @@ class SilkyScrollState with ChangeNotifier {
       clientController = ScrollController();
       isControllerOwn = true;
     }
-    silkyScrollController =
-        SilkyScrollController(clientController: clientController);
+    silkyScrollController = SilkyScrollController(
+      clientController: clientController,
+    );
 
     clientController.addListener(onScrollUpdate);
     recoilDurationMS = (silkyScrollDuration.inMilliseconds * 0.8).toInt();
@@ -89,6 +93,7 @@ class SilkyScrollState with ChangeNotifier {
         lastDelta.toInt() == 0) {
       return;
     }
+
     final double delta;
     if (lastDelta.isNegative) {
       delta = -1;
@@ -101,39 +106,19 @@ class SilkyScrollState with ChangeNotifier {
     }
     final int checkedOffsetAtEdge = checkOffsetAtEdge(delta, clientController);
     if (checkedOffsetAtEdge != 0) {
-      if ((currentScrollPhysics is BlockedScrollPhysics) == false) {
+      if ((currentScrollPhysics is BlockedScrollPhysics) == false &&
+          isOverScrolling == false) {
         scrollEnableTimer.cancel();
         currentScrollPhysics = kDisableScrollPhysics;
         notifyListeners();
+
         scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
 
-        // if (currentScrollPhysics is BouncingScrollPhysics) {
-        //   reserveCallbackScrollOnEdge = () {
-        //     final int offset = clientController.offset.toInt();
-        //     if (offset > -10) {
-        //       reserveCallbackScrollOnEdge = null;
-        //       currentScrollPhysics = BlockedScrollPhysics(
-        //           parent: currentScrollPhysics); //kDisableScrollPhysics;
-        //       notifyListeners();
-        //       scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
-        //     } else if (offset <
-        //         clientController.position.maxScrollExtent + 10) {
-        //       reserveCallbackScrollOnEdge = null;
-        //       currentScrollPhysics =
-        //           BlockedScrollPhysics(parent: currentScrollPhysics);
-        //       notifyListeners();
-        //       scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
-        //     }
-        //   };
-        // } else {
-        //   currentScrollPhysics = kDisableScrollPhysics;
-        //   notifyListeners();
-        //   scrollEnableTimer = Timer(edgeLockingDelay, unlockScroll);
-        // }
-
         if (parentSilkyScrollState != null && isNeedScrollEventBubbling) {
-          parentSilkyScrollState!
-              .manualHandleScroll(lastDelta * 2.8, isVertical);
+          parentSilkyScrollState!.manualHandleScroll(
+            lastDelta * 2.8,
+            isVertical,
+          );
         }
 
         lastDelta = 0;
@@ -156,18 +141,22 @@ class SilkyScrollState with ChangeNotifier {
         callIsVertical == isVertical) {
       //print(delta);
       if (delta.isNegative == _isInnerScrollNegative) {
-        futurePosition = min(max(0, futurePosition + delta),
-            clientController.position.maxScrollExtent);
+        futurePosition = min(
+          max(0, futurePosition + delta),
+          clientController.position.maxScrollExtent,
+        );
       } else {
         _isInnerScrollNegative = delta.isNegative;
-        futurePosition = min(max(0, clientController.offset + delta),
-            clientController.position.maxScrollExtent);
+        futurePosition = min(
+          max(0, clientController.offset + delta),
+          clientController.position.maxScrollExtent,
+        );
       }
 
       //decelerationManualHandleScroll(delta);
       final Duration duration = Duration(
-          milliseconds:
-              min(800, max(250, ((delta.abs() / 150) * 250).toInt())));
+        milliseconds: min(800, max(250, ((delta.abs() / 150) * 250).toInt())),
+      );
       clientController.animateTo(
         futurePosition,
         duration: duration,
@@ -237,15 +226,14 @@ class SilkyScrollState with ChangeNotifier {
     if (scrollSetDisableTimer.isActive) {
       return;
     } else {
-      scrollSetDisableTimer =
-          Timer(const Duration(milliseconds: 80), checkNeedLocking);
+      scrollSetDisableTimer = Timer(
+        const Duration(milliseconds: 80),
+        checkNeedLocking,
+      );
     }
   }
 
-  void handleMouseScroll(
-    double delta,
-    double scrollSpeed,
-  ) {
+  void handleMouseScroll(double delta, double scrollSpeed) {
     if (isRecoilScroll) {
       return;
     }
@@ -289,10 +277,7 @@ class SilkyScrollState with ChangeNotifier {
     animateToScroll(scrollDelta, scrollSpeed);
   }
 
-  void animateToScroll(
-    double scrollDelta,
-    double scrollSpeed,
-  ) {
+  void animateToScroll(double scrollDelta, double scrollSpeed) {
     if (scrollDelta > 0 != prevDeltaPositive) {
       prevDeltaPositive = !prevDeltaPositive;
       futurePosition =
@@ -306,24 +291,22 @@ class SilkyScrollState with ChangeNotifier {
       futurePosition = isPlatformBouncingScrollPhysics
           ? min(clientController.position.maxScrollExtent + 150, futurePosition)
           : clientController.position.maxScrollExtent;
-      duration =
-          Duration(milliseconds: silkyScrollDuration.inMilliseconds ~/ 2);
+      duration = Duration(
+        milliseconds: silkyScrollDuration.inMilliseconds ~/ 2,
+      );
     } else if (futurePosition < clientController.position.minScrollExtent) {
       futurePosition = isPlatformBouncingScrollPhysics
           ? max(clientController.position.minScrollExtent - 150, futurePosition)
           : clientController.position.minScrollExtent;
-      duration =
-          Duration(milliseconds: silkyScrollDuration.inMilliseconds ~/ 2);
+      duration = Duration(
+        milliseconds: silkyScrollDuration.inMilliseconds ~/ 2,
+      );
     } else {
       duration = silkyScrollDuration;
     }
     isOnSilkyScrolling = true;
-    final Future<void> animationEnd =
-        _animationEnd = clientController.animateTo(
-      futurePosition,
-      duration: duration,
-      curve: animationCurve,
-    );
+    final Future<void> animationEnd = _animationEnd = clientController
+        .animateTo(futurePosition, duration: duration, curve: animationCurve);
     animationEnd.whenComplete(() {
       if (animationEnd == _animationEnd) {
         isOnSilkyScrolling = false;
@@ -346,16 +329,16 @@ class SilkyScrollState with ChangeNotifier {
           notifyListeners();
           clientController
               .animateTo(
-            edgePosition,
-            duration: Duration(milliseconds: recoilDurationMS),
-            curve: Curves.easeInOutSine,
-          )
+                edgePosition,
+                duration: Duration(milliseconds: recoilDurationMS),
+                curve: Curves.easeInOutSine,
+              )
               .whenComplete(() {
-            if (isAlive) {
-              isRecoilScroll = false;
-              notifyListeners();
-            }
-          });
+                if (isAlive) {
+                  isRecoilScroll = false;
+                  notifyListeners();
+                }
+              });
         }
       }
     });
@@ -366,7 +349,8 @@ class SilkyScrollState with ChangeNotifier {
     scrollSetDisableTimer.cancel();
     widgetScrollPhysics = scrollPhysics;
     currentScrollPhysics = scrollPhysics;
-    notifyListeners();
+
+    //notifyListeners();
   }
 
   void onScrollUpdate() {

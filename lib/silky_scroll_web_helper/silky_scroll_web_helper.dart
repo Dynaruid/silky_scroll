@@ -18,12 +18,16 @@ class SilkyScrollWebManager extends SilkyScrollWebManagerInterface {
     if (rootBodyElement != null) {
       if (overscrollBehaviorXTimer.isActive) {
         overscrollBehaviorXTimer.cancel();
-        overscrollBehaviorXTimer =
-            Timer(const Duration(milliseconds: 700), resetOverscrollBehaviorX);
+        overscrollBehaviorXTimer = Timer(
+          const Duration(milliseconds: 700),
+          resetOverscrollBehaviorX,
+        );
       } else {
         rootBodyElement!.style.overscrollBehaviorX = "none";
-        overscrollBehaviorXTimer =
-            Timer(const Duration(milliseconds: 700), resetOverscrollBehaviorX);
+        overscrollBehaviorXTimer = Timer(
+          const Duration(milliseconds: 700),
+          resetOverscrollBehaviorX,
+        );
       }
     }
   }

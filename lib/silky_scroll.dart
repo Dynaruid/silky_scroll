@@ -1,5 +1,7 @@
 library silky_scroll;
 
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,8 +17,12 @@ class SilkyScroll extends StatefulWidget {
   final ScrollPhysics physics;
   final SilkyScrollWidgetBuilder builder;
   final Duration edgeLockingDelay;
+  final Duration overScrollingLockingDelay;
   final bool isNeedScrollEventBubbling;
+  final bool isTurnOffStretchEffect;
+
   final void Function(double delta)? scrollCallback;
+  final void Function(double delta)? onEdgeOverScrollCallback;
   final Function(PointerDeviceKind)? setManualPointerDeviceKind;
   final bool isDebug;
 
@@ -29,10 +35,13 @@ class SilkyScroll extends StatefulWidget {
     this.direction = Axis.vertical,
     this.physics = const ScrollPhysics(),
     this.edgeLockingDelay = const Duration(milliseconds: 650),
+    this.overScrollingLockingDelay = const Duration(milliseconds: 700),
+    this.isTurnOffStretchEffect = false,
     this.isNeedScrollEventBubbling = false,
     this.isDebug = false,
     this.setManualPointerDeviceKind,
     this.scrollCallback,
+    this.onEdgeOverScrollCallback,
     required this.builder,
   });
 
@@ -43,29 +52,31 @@ class SilkyScroll extends StatefulWidget {
 class _SilkyScrollState extends State<SilkyScroll> {
   late final SilkyScrollState silkyScrollState;
   late final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
-
+  late ScrollPhysics currentPhysics;
+  Timer overScrollingDetectTimer = Timer(Duration.zero, () {});
   @override
   void initState() {
     super.initState();
     silkyScrollMousePointerManager = SilkyScrollMousePointerManager();
     silkyScrollState = SilkyScrollState(
-        scrollController: widget.controller,
-        widgetScrollPhysics: widget.physics,
-        silkyScrollDuration: widget.silkyScrollDuration,
-        animationCurve: widget.animationCurve,
-        edgeLockingDelay: widget.edgeLockingDelay,
-        scrollSpeed: widget.scrollSpeed,
-        setManualPointerDeviceKind: widget.setManualPointerDeviceKind,
-        isVertical: widget.direction == Axis.vertical,
-        isNeedScrollEventBubbling: widget.isNeedScrollEventBubbling,
-        silkyScrollMousePointerManager: silkyScrollMousePointerManager,
-        isDebug: widget.isDebug);
+      scrollController: widget.controller,
+      widgetScrollPhysics: widget.physics,
+      silkyScrollDuration: widget.silkyScrollDuration,
+      animationCurve: widget.animationCurve,
+      edgeLockingDelay: widget.edgeLockingDelay,
+      scrollSpeed: widget.scrollSpeed,
+      setManualPointerDeviceKind: widget.setManualPointerDeviceKind,
+      isVertical: widget.direction == Axis.vertical,
+      isNeedScrollEventBubbling: widget.isNeedScrollEventBubbling,
+      silkyScrollMousePointerManager: silkyScrollMousePointerManager,
+      isDebug: widget.isDebug,
+    );
+    currentPhysics = widget.physics;
   }
 
   @override
   void didUpdateWidget(covariant SilkyScroll oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (oldWidget.physics != widget.physics) {
       silkyScrollState.setWidgetScrollPhysics(scrollPhysics: widget.physics);
     }
@@ -74,6 +85,7 @@ class _SilkyScrollState extends State<SilkyScroll> {
   @override
   void dispose() {
     silkyScrollState.dispose();
+    overScrollingDetectTimer.cancel();
     super.dispose();
   }
 
@@ -93,19 +105,33 @@ class _SilkyScrollState extends State<SilkyScroll> {
     return ChangeNotifierProvider.value(
       value: silkyScrollState,
       builder: (BuildContext context, Widget? child) {
-        context.select((SilkyScrollState state) => state.widgetScrollPhysics);
-        final currentPhysics = context
-            .select((SilkyScrollState state) => state.currentScrollPhysics);
+        //context.select((SilkyScrollState state) => state.widgetScrollPhysics);
+        currentPhysics = context.select(
+          (SilkyScrollState state) => state.currentScrollPhysics,
+        );
+        // currentPhysics = silkyScrollState.currentScrollPhysics;
         return MouseRegion(
           onEnter: (e) {
-            silkyScrollMousePointerManager
-                .enteredKey(silkyScrollState.pointKey);
+            silkyScrollMousePointerManager.enteredKey(
+              silkyScrollState.pointKey,
+            );
           },
           onExit: (e) {
             silkyScrollMousePointerManager.exitKey(silkyScrollState.pointKey);
           },
           opaque: false,
-          child: Listener(
+          child: NotificationListener<OverscrollIndicatorNotification>(
+            onNotification: (OverscrollIndicatorNotification overscroll) {
+              if (silkyScrollState.scrollEnableTimer.isActive ||
+                  overScrollingDetectTimer.isActive ||
+                  widget.isTurnOffStretchEffect) {
+                overscroll.disallowIndicator();
+                return false;
+              }
+              silkyScrollState.isOverScrolling = true;
+              return true;
+            },
+            child: Listener(
               onPointerHover: (PointerHoverEvent signalEvent) {
                 checkTrackpad(signalEvent.kind);
               },
@@ -113,16 +139,22 @@ class _SilkyScrollState extends State<SilkyScroll> {
                 if (signalEvent is PointerScrollEvent) {
                   if (checkTrackpad(signalEvent.kind)) {
                     silkyScrollState.triggerTouchAction(
-                        signalEvent.scrollDelta, PointerDeviceKind.trackpad);
+                      signalEvent.scrollDelta,
+                      PointerDeviceKind.trackpad,
+                    );
                   } else {
                     if (silkyScrollMousePointerManager
-                        .trackpadCheckTimer.isActive) {
+                        .trackpadCheckTimer
+                        .isActive) {
                       silkyScrollState.triggerTouchAction(
-                          signalEvent.scrollDelta, PointerDeviceKind.trackpad);
+                        signalEvent.scrollDelta,
+                        PointerDeviceKind.trackpad,
+                      );
                     } else {
                       final double scrollDeltaY = signalEvent.scrollDelta.dy;
                       if (silkyScrollMousePointerManager
-                          .mouseCheckTimer.isActive) {
+                          .mouseCheckTimer
+                          .isActive) {
                         silkyScrollState.triggerMouseAction(scrollDeltaY);
                       } else {
                         final double scrollDeltaX = signalEvent.scrollDelta.dx;
@@ -139,23 +171,49 @@ class _SilkyScrollState extends State<SilkyScroll> {
               },
               onPointerMove: (PointerMoveEvent event) {
                 if (event.kind == PointerDeviceKind.touch) {
-                  silkyScrollState
-                      .setPointerDeviceKind(PointerDeviceKind.touch);
+                  silkyScrollState.setPointerDeviceKind(
+                    PointerDeviceKind.touch,
+                  );
                   silkyScrollState.triggerTouchAction(
-                      event.delta, PointerDeviceKind.touch);
+                    event.delta,
+                    PointerDeviceKind.touch,
+                  );
                 }
               },
               onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
                 silkyScrollState.triggerTouchAction(
-                    event.panDelta, PointerDeviceKind.trackpad);
+                  event.panDelta,
+                  PointerDeviceKind.trackpad,
+                );
               },
-              child: widget.builder(context,
-                  silkyScrollState.silkyScrollController, currentPhysics)),
+              onPointerUp: (PointerUpEvent event) {
+                if (event.kind == PointerDeviceKind.touch) {
+                  if (silkyScrollState.isOverScrolling) {
+                    silkyScrollState.isOverScrolling = false;
+                    overScrollingDetectTimer.cancel();
+                    overScrollingDetectTimer = Timer(
+                      widget.overScrollingLockingDelay,
+                      () {},
+                    ); //오버스크롤 효과 차단
+                  }
+                }
+              },
+              child: widget.builder(
+                context,
+                silkyScrollState.silkyScrollController,
+                currentPhysics,
+              ),
+            ),
+          ),
         );
       },
     );
   }
 }
 
-typedef SilkyScrollWidgetBuilder = Widget Function(
-    BuildContext context, ScrollController controller, ScrollPhysics physics);
+typedef SilkyScrollWidgetBuilder =
+    Widget Function(
+      BuildContext context,
+      ScrollController controller,
+      ScrollPhysics physics,
+    );

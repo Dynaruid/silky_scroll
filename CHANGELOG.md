@@ -64,3 +64,7 @@
 ## 1.0.15
 
 * TODO: dart format
+
+## 1.0.16
+
+* TODO: Added support for Android's scroll stretch effect.
