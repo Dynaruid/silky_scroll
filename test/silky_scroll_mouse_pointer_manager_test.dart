@@ -52,20 +52,69 @@ void main() {
       expect(manager.reserveKey, isNull);
     });
 
-    test('trackpadCheckTimer is initially inactive', () {
-      expect(manager.trackpadCheckTimer?.isActive ?? false, isFalse);
+    test('isRecentlyTrackpad is initially false', () {
+      expect(manager.isRecentlyTrackpad, isFalse);
     });
 
-    test('resetTrackpadCheckTimer activates trackpad timer', () {
-      manager.resetTrackpadCheckTimer();
-      expect(manager.trackpadCheckTimer?.isActive, isTrue);
-      expect(manager.mouseCheckTimer?.isActive ?? false, isFalse);
+    test('markPanZoomActivity sets isRecentlyTrackpad to true', () {
+      manager.markPanZoomActivity();
+      expect(manager.isRecentlyTrackpad, isTrue);
     });
 
-    test('resetMouseCheckTimer activates mouse timer', () {
-      manager.resetMouseCheckTimer();
-      expect(manager.mouseCheckTimer?.isActive, isTrue);
-      expect(manager.trackpadCheckTimer?.isActive ?? false, isFalse);
+    test('isRecentlyTrackpad from PanZoom becomes false after 150ms', () async {
+      manager.markPanZoomActivity();
+      expect(manager.isRecentlyTrackpad, isTrue);
+
+      // Wait for the 150ms timeout to expire
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(manager.isRecentlyTrackpad, isFalse);
+    });
+
+    test('markTrackpadHeuristic is no-op on non-web', () {
+      // On non-web, markTrackpadHeuristic should not change state.
+      manager.markTrackpadHeuristic();
+      expect(manager.isRecentlyTrackpad, isFalse);
+    });
+
+    test('clearTrackpadMemory clears heuristic timer', () {
+      // On non-web, heuristic is no-op, but clearTrackpadMemory
+      // should still be safe to call.
+      manager.clearTrackpadMemory();
+      expect(manager.isRecentlyTrackpad, isFalse);
+    });
+
+    test('clearTrackpadMemory does not clear PanZoom timer', () {
+      manager.markPanZoomActivity();
+      expect(manager.isRecentlyTrackpad, isTrue);
+
+      manager.clearTrackpadMemory();
+      // PanZoom timer should still be active
+      expect(manager.isRecentlyTrackpad, isTrue);
+    });
+
+    test('clearPanZoomMemory clears PanZoom timer immediately', () {
+      manager.markPanZoomActivity();
+      expect(manager.isRecentlyTrackpad, isTrue);
+
+      manager.clearPanZoomMemory();
+      expect(manager.isRecentlyTrackpad, isFalse);
+    });
+
+    test('clearPanZoomMemory does not clear heuristic timer', () {
+      // On non-web, heuristic is no-op, so both timers are inactive.
+      // This test verifies that clearPanZoomMemory is safe to call
+      // even when only a heuristic timer would be active (web).
+      manager.markPanZoomActivity();
+      manager.clearPanZoomMemory();
+      expect(manager.isRecentlyTrackpad, isFalse);
+    });
+
+    test('resetForTesting clears all trackpad timers', () {
+      manager.markPanZoomActivity();
+      expect(manager.isRecentlyTrackpad, isTrue);
+
+      manager.resetForTesting();
+      expect(manager.isRecentlyTrackpad, isFalse);
     });
   });
 }

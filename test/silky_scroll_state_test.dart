@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silky_scroll/src/silky_scroll_state.dart';
@@ -390,6 +388,58 @@ void main() {
 
       childState.dispose();
       parentState.dispose();
+    });
+  });
+
+  group('SilkyScrollState — cancelSilkyScroll', () {
+    late SilkyScrollState state;
+    late SilkyScrollMousePointerManager manager;
+
+    setUp(() {
+      manager = SilkyScrollMousePointerManager();
+      manager.resetForTesting();
+    });
+
+    tearDown(() {
+      if (!state.isDisposed) {
+        state.dispose();
+      }
+    });
+
+    testWidgets(
+      'cancelSilkyScroll resets isOnSilkyScrolling and futurePosition',
+      (tester) async {
+        state = _createState(manager: manager);
+        await tester.pumpWidget(
+          _buildScrollable(controller: state.clientController),
+        );
+
+        // Simulate an in-progress silky scroll
+        state.isOnSilkyScrolling = true;
+        state.futurePosition = 500.0;
+
+        state.cancelSilkyScroll();
+
+        expect(state.isOnSilkyScrolling, isFalse);
+        expect(state.futurePosition, state.clientController.offset);
+      },
+    );
+
+    testWidgets('cancelSilkyScroll is no-op when not scrolling', (
+      tester,
+    ) async {
+      state = _createState(manager: manager);
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      state.isOnSilkyScrolling = false;
+      state.futurePosition = 0.0;
+
+      // Should not throw
+      state.cancelSilkyScroll();
+
+      expect(state.isOnSilkyScrolling, isFalse);
     });
   });
 }

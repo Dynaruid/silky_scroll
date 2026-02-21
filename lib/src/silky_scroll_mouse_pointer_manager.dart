@@ -19,27 +19,78 @@ final class SilkyScrollMousePointerManager {
   UniqueKey? reserveKey;
   final List<UniqueKey> keyStack = [];
   late final SilkyScrollWebManager silkyScrollWebManager;
-  Timer? trackpadCheckTimer;
-  Timer? mouseCheckTimer;
 
-  static const int _kDeviceCheckTimeoutMs = 2000;
+  // ── Trackpad detection timers ──
+  //
+  // Two independent signals feed a single [isRecentlyTrackpad] getter:
+  //
+  // 1. _panZoomTimer (_kPanZoomTimeoutMs, native only)
+  //    PointerPanZoomUpdate is generated exclusively by native trackpads,
+  //    so it is a high-confidence, short-lived signal.
+  //
+  // 2. _heuristicTrackpadTimer (_kHeuristicTrackpadTimeoutMs, web only)
+  //    On web, PointerPanZoomUpdate is never generated.  We rely on
+  //    heuristic matches (small delta, horizontal component) as a
+  //    longer-lived "memory" signal for subsequent ambiguous events.
 
-  void resetTrackpadCheckTimer() {
-    mouseCheckTimer?.cancel();
-    trackpadCheckTimer?.cancel();
-    trackpadCheckTimer = Timer(
-      const Duration(milliseconds: _kDeviceCheckTimeoutMs),
+  Timer? _panZoomTimer;
+  Timer? _heuristicTrackpadTimer;
+
+  static const int _kPanZoomTimeoutMs = 150;
+  static const int _kHeuristicTrackpadTimeoutMs = 800;
+
+  /// Whether recent input was from a trackpad — from *any* detection source.
+  ///
+  /// Combines PanZoom activity (native, _kPanZoomTimeoutMs) and heuristic-based
+  /// detection (web, _kHeuristicTrackpadTimeoutMs) into a single check.
+  bool get isRecentlyTrackpad =>
+      (_panZoomTimer?.isActive ?? false) ||
+      (_heuristicTrackpadTimer?.isActive ?? false);
+
+  /// Records PanZoom activity (native trackpads only, _kPanZoomTimeoutMs window).
+  void markPanZoomActivity() {
+    _panZoomTimer?.cancel();
+    _panZoomTimer = Timer(
+      const Duration(milliseconds: _kPanZoomTimeoutMs),
       () {},
     );
   }
 
-  void resetMouseCheckTimer() {
-    trackpadCheckTimer?.cancel();
-    mouseCheckTimer?.cancel();
-    mouseCheckTimer = Timer(
-      const Duration(milliseconds: _kDeviceCheckTimeoutMs),
+  /// Records a heuristic-based trackpad detection (web only).
+  ///
+  /// On native platforms this is a no-op because [_panZoomTimer] already
+  /// provides a more precise, shorter-lived signal.  Activating the
+  /// _kHeuristicTrackpadTimeoutMs heuristic timer on native would delay trackpad → mouse
+  /// transitions unnecessarily.
+  void markTrackpadHeuristic() {
+    if (!silkyScrollWebManager.isWebPlatform) return;
+    _heuristicTrackpadTimer?.cancel();
+    _heuristicTrackpadTimer = Timer(
+      const Duration(milliseconds: _kHeuristicTrackpadTimeoutMs),
       () {},
     );
+  }
+
+  /// Clears heuristic-based trackpad memory.
+  ///
+  /// Called when mouse input is confirmed so that subsequent events
+  /// are not misclassified as trackpad.  Does not touch [_panZoomTimer]
+  /// because PanZoom events are hardware-sourced and self-expire in _kPanZoomTimeoutMs.
+  void clearTrackpadMemory() {
+    _heuristicTrackpadTimer?.cancel();
+    _heuristicTrackpadTimer = null;
+  }
+
+  /// Clears PanZoom-based trackpad memory immediately.
+  ///
+  /// Called when [PointerPanZoomEnd] fires (native only), meaning the
+  /// user lifted their hand from the trackpad.  Clearing the timer
+  /// right away — instead of waiting for the [_kPanZoomTimeoutMs]
+  /// window to expire — allows the very next scroll event to be
+  /// correctly identified as mouse input.
+  void clearPanZoomMemory() {
+    _panZoomTimer?.cancel();
+    _panZoomTimer = null;
   }
 
   void reservingKey(UniqueKey key) {
@@ -72,9 +123,9 @@ final class SilkyScrollMousePointerManager {
   void resetForTesting() {
     reserveKey = null;
     keyStack.clear();
-    trackpadCheckTimer?.cancel();
-    trackpadCheckTimer = null;
-    mouseCheckTimer?.cancel();
-    mouseCheckTimer = null;
+    _panZoomTimer?.cancel();
+    _panZoomTimer = null;
+    _heuristicTrackpadTimer?.cancel();
+    _heuristicTrackpadTimer = null;
   }
 }

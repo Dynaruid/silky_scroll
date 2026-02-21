@@ -171,7 +171,7 @@ class _SilkyScrollState extends State<SilkyScroll> {
   bool _handleTrackpadCheck(PointerDeviceKind kind) {
     if (kind == PointerDeviceKind.trackpad) {
       silkyScrollState.setPointerDeviceKind(PointerDeviceKind.trackpad);
-      silkyScrollMousePointerManager.resetTrackpadCheckTimer();
+      silkyScrollMousePointerManager.markTrackpadHeuristic();
       return true;
     } else {
       return false;
@@ -181,17 +181,9 @@ class _SilkyScrollState extends State<SilkyScroll> {
   void _onPointerSignal(PointerSignalEvent signalEvent) {
     if (signalEvent is! PointerScrollEvent) return;
 
-    // 1. Trackpad device directly detected
+    // ── Step 1: Platform directly reports trackpad ──
     if (_handleTrackpadCheck(signalEvent.kind)) {
-      silkyScrollState.triggerTouchAction(
-        signalEvent.scrollDelta,
-        PointerDeviceKind.trackpad,
-      );
-      return;
-    }
-
-    // 2. Recently seen trackpad activity
-    if (silkyScrollMousePointerManager.trackpadCheckTimer?.isActive ?? false) {
+      _ensureTrackpadMode();
       silkyScrollState.triggerTouchAction(
         signalEvent.scrollDelta,
         PointerDeviceKind.trackpad,
@@ -200,22 +192,51 @@ class _SilkyScrollState extends State<SilkyScroll> {
     }
 
     final double scrollDeltaY = signalEvent.scrollDelta.dy;
-
-    // 3. Recently seen mouse activity
-    if (silkyScrollMousePointerManager.mouseCheckTimer?.isActive ?? false) {
-      silkyScrollState.triggerMouseAction(scrollDeltaY);
-      return;
-    }
-
-    // 4. Heuristic: detect trackpad by horizontal delta or tiny vertical delta
     final double scrollDeltaX = signalEvent.scrollDelta.dx;
+
+    // ── Step 2: Heuristic — horizontal delta or tiny vertical delta → trackpad ──
+    // ★ Runs before timer checks → detects device switch immediately ★
     if ((scrollDeltaX * 10).toInt() != 0 || scrollDeltaY.abs() < 4) {
       _handleTrackpadCheck(PointerDeviceKind.trackpad);
+      _ensureTrackpadMode();
+      silkyScrollState.triggerTouchAction(
+        signalEvent.scrollDelta,
+        PointerDeviceKind.trackpad,
+      );
       return;
     }
 
-    // 5. Default: treat as mouse scroll
+    // ── Step 3: Recent trackpad activity → trackpad (fast vertical swipe) ──
+    // Unified check that combines two platform-specific signals:
+    //   • Native: PanZoom activity within _kPanZoomTimeoutMs (high-confidence)
+    //   • Web:    Heuristic match within _kHeuristicTrackpadTimeoutMs (no PanZoom on web)
+    //
+    // Why we don't filter out signalEvent.kind == mouse here:
+    //   On Flutter Web, trackpad scroll events report kind == trackpad only
+    //   at the *start* of the gesture. Subsequent frames arrive with
+    //   kind == mouse and only carry a delta — no device kind update.
+    //   The _kHeuristicTrackpadTimeoutMs heuristic window exists precisely to cover these
+    //   "headless" follow-up frames, so excluding mouse would break
+    //   web trackpad detection entirely.
+    //
+    //   On native, this branch is guarded by _panZoomTimer (_kPanZoomTimeoutMs),
+    //   which is short enough that a real mouse event within that
+    //   window is extremely unlikely.
+    if (silkyScrollMousePointerManager.isRecentlyTrackpad) {
+      silkyScrollState.triggerTouchAction(
+        signalEvent.scrollDelta,
+        PointerDeviceKind.trackpad,
+      );
+      return;
+    }
+
+    // ── Step 4: Treat as mouse ──
     silkyScrollState.triggerMouseAction(scrollDeltaY);
+  }
+
+  /// Cancel any in-progress mouse animation when switching to trackpad mode.
+  void _ensureTrackpadMode() {
+    silkyScrollState.cancelSilkyScroll();
   }
 
   @override
@@ -269,10 +290,19 @@ class _SilkyScrollState extends State<SilkyScroll> {
                   }
                 },
                 onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+                  silkyScrollState.setPointerDeviceKind(
+                    PointerDeviceKind.trackpad,
+                  );
+                  silkyScrollMousePointerManager.markPanZoomActivity();
+                  silkyScrollState.cancelSilkyScroll();
+
                   silkyScrollState.triggerTouchAction(
                     event.panDelta,
                     PointerDeviceKind.trackpad,
                   );
+                },
+                onPointerPanZoomEnd: (PointerPanZoomEndEvent event) {
+                  silkyScrollMousePointerManager.clearPanZoomMemory();
                 },
                 onPointerUp: (PointerUpEvent event) {
                   if (event.kind == PointerDeviceKind.touch) {

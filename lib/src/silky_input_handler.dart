@@ -48,6 +48,6 @@ final class SilkyInputHandler {
     _delegate.setPointerDeviceKind(PointerDeviceKind.mouse);
     _delegate.onScroll?.call(scrollDeltaY);
     _delegate.handleMouseScroll(scrollDeltaY, _delegate.scrollSpeed);
-    _delegate.silkyScrollMousePointerManager.resetMouseCheckTimer();
+    _delegate.silkyScrollMousePointerManager.clearTrackpadMemory();
   }
 }

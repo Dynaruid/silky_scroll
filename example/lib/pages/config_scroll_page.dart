@@ -19,6 +19,7 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
   double _edgeLockMs = 650;
   bool _stretch = true;
   Curve _curve = Curves.easeOutQuart;
+  bool _panelOpen = true;
 
   static const _curveOptions = <String, Curve>{
     'easeOutQuart': Curves.easeOutQuart,
@@ -50,104 +51,162 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Config Playground')),
-      body: Column(
+      body: Stack(
         children: [
-          // ── Controls ───────────────────────────────────────────────────
-          Material(
-            color: cs.surfaceContainerLow,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                children: [
-                  _SliderRow(
-                    label: 'Speed',
-                    value: _speed,
-                    min: 0.2,
-                    max: 5.0,
-                    display: '×${_speed.toStringAsFixed(1)}',
-                    onChanged: (v) => setState(() => _speed = v),
-                  ),
-                  _SliderRow(
-                    label: 'Duration',
-                    value: _durationMs,
-                    min: 100,
-                    max: 3000,
-                    display: '${_durationMs.round()} ms',
-                    onChanged: (v) => setState(() => _durationMs = v),
-                  ),
-                  _SliderRow(
-                    label: 'Edge Lock',
-                    value: _edgeLockMs,
-                    min: 0,
-                    max: 2000,
-                    display: '${_edgeLockMs.round()} ms',
-                    onChanged: (v) => setState(() => _edgeLockMs = v),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  Row(
-                    children: [
-                      FilterChip(
-                        label: const Text('Stretch'),
-                        selected: _stretch,
-                        onSelected: (v) => setState(() => _stretch = v),
-                      ),
-                      const Spacer(),
-                      DropdownButton<String>(
-                        value: _curveName,
-                        isDense: true,
-                        underline: const SizedBox.shrink(),
-                        items: _curveOptions.keys
-                            .map(
-                              (name) => DropdownMenuItem(
-                                value: name,
-                                child: Text(
-                                  name,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (name) {
-                          if (name != null) {
-                            setState(() => _curve = _curveOptions[name]!);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
+          // ── Side-by-side comparison (full area) ───────────────────────
+          Row(
+            children: [
+              // Left: SilkyScroll
+              Expanded(
+                child: _ComparisonPane(
+                  label: 'SilkyScroll',
+                  accent: cs.primary,
+                  config: _config,
+                ),
               ),
-            ),
+
+              VerticalDivider(width: 1, color: cs.outlineVariant),
+
+              // Right: Default Flutter scroll
+              Expanded(
+                child: _DefaultScrollPane(
+                  label: 'Default',
+                  accent: cs.tertiary,
+                ),
+              ),
+            ],
           ),
 
-          const Divider(height: 1),
-
-          // ── Side-by-side comparison ────────────────────────────────────
-          Expanded(
-            child: Row(
-              children: [
-                // Left: SilkyScroll
-                Expanded(
-                  child: _ComparisonPane(
-                    label: 'SilkyScroll',
-                    accent: cs.primary,
-                    config: _config,
-                  ),
-                ),
-
-                VerticalDivider(width: 1, color: cs.outlineVariant),
-
-                // Right: Default Flutter scroll
-                Expanded(
-                  child: _DefaultScrollPane(
-                    label: 'Default',
-                    accent: cs.tertiary,
-                  ),
-                ),
-              ],
+          // ── Floating config panel (top-left) ──────────────────────────
+          Positioned(
+            top: 12,
+            left: 12,
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 6,
+                borderRadius: BorderRadius.circular(14),
+                color: cs.surfaceContainerLow.withValues(alpha: 0.95),
+                clipBehavior: Clip.antiAlias,
+                child: _panelOpen
+                    ? SizedBox(
+                        width: 320,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Header row with collapse button
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(14, 8, 4, 0),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.tune, size: 18, color: cs.primary),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Config',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 18),
+                                    onPressed: () =>
+                                        setState(() => _panelOpen = false),
+                                    visualDensity: VisualDensity.compact,
+                                    tooltip: 'Collapse',
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                              child: Column(
+                                children: [
+                                  _SliderRow(
+                                    label: 'Speed',
+                                    value: _speed,
+                                    min: 0.2,
+                                    max: 5.0,
+                                    display: '×${_speed.toStringAsFixed(1)}',
+                                    onChanged: (v) =>
+                                        setState(() => _speed = v),
+                                  ),
+                                  _SliderRow(
+                                    label: 'Duration',
+                                    value: _durationMs,
+                                    min: 100,
+                                    max: 3000,
+                                    display: '${_durationMs.round()} ms',
+                                    onChanged: (v) =>
+                                        setState(() => _durationMs = v),
+                                  ),
+                                  _SliderRow(
+                                    label: 'Edge Lock',
+                                    value: _edgeLockMs,
+                                    min: 0,
+                                    max: 2000,
+                                    display: '${_edgeLockMs.round()} ms',
+                                    onChanged: (v) =>
+                                        setState(() => _edgeLockMs = v),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      FilterChip(
+                                        label: const Text('Stretch'),
+                                        selected: _stretch,
+                                        onSelected: (v) =>
+                                            setState(() => _stretch = v),
+                                      ),
+                                      const Spacer(),
+                                      DropdownButton<String>(
+                                        value: _curveName,
+                                        isDense: true,
+                                        underline: const SizedBox.shrink(),
+                                        items: _curveOptions.keys
+                                            .map(
+                                              (name) => DropdownMenuItem(
+                                                value: name,
+                                                child: Text(
+                                                  name,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (name) {
+                                          if (name != null) {
+                                            setState(
+                                              () =>
+                                                  _curve = _curveOptions[name]!,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : // Collapsed: small FAB-like button
+                      InkWell(
+                        onTap: () => setState(() => _panelOpen = true),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Icon(Icons.tune, color: cs.primary, size: 22),
+                        ),
+                      ),
+              ),
             ),
           ),
         ],

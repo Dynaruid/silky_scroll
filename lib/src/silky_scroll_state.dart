@@ -178,6 +178,19 @@ class SilkyScrollState extends ChangeNotifier
   void triggerMouseAction(double scrollDeltaY) =>
       _inputHandler.triggerMouseAction(scrollDeltaY);
 
+  /// Immediately cancels any in-progress smooth scroll animation.
+  ///
+  /// Called on mouse→trackpad switch so that trackpad direct scrolling
+  /// takes effect immediately.
+  void cancelSilkyScroll() {
+    if (isOnSilkyScrolling && clientController.hasClients) {
+      // jumpTo cancels the in-progress animateTo (DrivenScrollActivity → Idle)
+      clientController.jumpTo(clientController.offset);
+      isOnSilkyScrolling = false;
+      futurePosition = clientController.offset;
+    }
+  }
+
   // ── State machine transitions ─────────────────────────────────────
 
   void _transitionTo(
