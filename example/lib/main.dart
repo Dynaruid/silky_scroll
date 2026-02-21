@@ -3,6 +3,7 @@ import 'pages/basic_scroll_page.dart';
 import 'pages/nested_scroll_page.dart';
 import 'pages/horizontal_scroll_page.dart';
 import 'pages/config_scroll_page.dart';
+import 'theme/app_colors.dart';
 
 void main() {
   runApp(const SilkyScrollExampleApp());
@@ -16,20 +17,8 @@ class SilkyScrollExampleApp extends StatelessWidget {
     return MaterialApp(
       title: 'Silky Scroll Example',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A237E),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A237E),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       home: const MainScreen(),
     );
   }

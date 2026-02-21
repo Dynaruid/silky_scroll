@@ -173,8 +173,6 @@ class _ComparisonPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return Column(
       children: [
         _PaneHeader(label: label, accent: accent, icon: Icons.auto_awesome),
@@ -189,7 +187,7 @@ class _ComparisonPane extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 itemCount: 80,
                 itemBuilder: (context, index) =>
-                    _ColorTile(index: index, accent: accent, cs: cs),
+                    _ColorTile(index: index, accent: accent),
               );
             },
           ),
@@ -211,8 +209,6 @@ class _DefaultScrollPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return Column(
       children: [
         _PaneHeader(label: label, accent: accent, icon: Icons.compare_arrows),
@@ -221,7 +217,7 @@ class _DefaultScrollPane extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             itemCount: 80,
             itemBuilder: (context, index) =>
-                _ColorTile(index: index, accent: accent, cs: cs),
+                _ColorTile(index: index, accent: accent),
           ),
         ),
       ],
@@ -270,15 +266,10 @@ class _PaneHeader extends StatelessWidget {
 }
 
 class _ColorTile extends StatelessWidget {
-  const _ColorTile({
-    required this.index,
-    required this.accent,
-    required this.cs,
-  });
+  const _ColorTile({required this.index, required this.accent});
 
   final int index;
   final Color accent;
-  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +287,12 @@ class _ColorTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Text(
         'Item ${index + 1}',
-        style: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: color.computeLuminance() > 0.35
+              ? const Color(0xFF1A1A1A)
+              : const Color(0xFFF5F5F5),
+        ),
       ),
     );
   }
