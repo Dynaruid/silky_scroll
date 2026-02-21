@@ -1,16 +1,19 @@
 # Silky Scroll
+
 `SilkyScroll` is a Flutter package that enhances the scrolling experience by adding smooth animations and customizable scroll physics for mobile, desktop, and web platforms.
 
-First gif: Scrolling slowly.  
-Second gif: Scrolling quickly (flick scroll).   
-Third gif: Mobile drag scroll detected, physics change.  
+First gif: Scrolling slowly.
+Second gif: Scrolling quickly (flick scroll).
+Third gif: Mobile drag scroll detected, physics change.
+
 <p float="left">
-  <img src="https://raw.githubusercontent.com/Bluebar1/dyn_mouse_scroll/main/assets/slow_scroll.gif" width="200" height="350"/>
-  <img src="https://raw.githubusercontent.com/Bluebar1/dyn_mouse_scroll/main/assets/fast_scroll.gif" width="200" height="350"/>
-  <img src="https://raw.githubusercontent.com/Bluebar1/dyn_mouse_scroll/main/assets/drag_scroll.gif" width="200" height="350"/>
+  <img src="https://raw.githubusercontent.com/Dynaruid/silky_scroll/main/assets/slow_scroll.gif" width="200" height="350"/>
+  <img src="https://raw.githubusercontent.com/Dynaruid/silky_scroll/main/assets/fast_scroll.gif" width="200" height="350"/>
+  <img src="https://raw.githubusercontent.com/Dynaruid/silky_scroll/main/assets/drag_scroll.gif" width="200" height="350"/>
 </p>
 
 ## Basic Usage
+
 ```dart
 SilkyScroll(
   builder: (context, controller, physics) => ListView(
@@ -22,6 +25,7 @@ SilkyScroll(
 ```
 
 ## Custom Usage
+
 ```dart
 class _ScrollExampleState extends State<ScrollExample> {
   late final ScrollController _scrollController;
@@ -72,4 +76,3 @@ class _ScrollExampleState extends State<ScrollExample> {
   }
 }
 ```
-

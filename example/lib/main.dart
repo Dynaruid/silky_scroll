@@ -37,7 +37,7 @@ class _ScrollExampleState extends State<ScrollExample> {
     _scrollController = ScrollController();
     _scrollController.addListener(() {
       final double offset = _scrollController.offset;
-      print("scrollController offset is $offset");
+      debugPrint("scrollController offset is $offset");
     });
   }
 

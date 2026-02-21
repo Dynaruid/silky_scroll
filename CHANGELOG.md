@@ -1,70 +1,145 @@
-## 1.0.0
+# Changelog
 
-* TODO: initial release.
+All notable changes to this project will be documented in this file.
 
-## 1.0.1
+## 2.0.0
 
-* TODO: add web supports.
+### Breaking
 
-## 1.0.2
+- Removed `provider` dependency; replaced with `InheritedWidget` + `ListenableBuilder`.
+- Applied Dart 3 `final class` / `abstract interface class` modifiers to all public classes. External `extends` / `implements` is no longer permitted for concrete types.
+- Exported `ScrollPhysicsPhase` enum from barrel file.
 
-* TODO: add web supports.
+### Added
 
-## 1.0.3
+- `SilkyScrollConfig.copyWith`, `==`, `hashCode`, and `toString`.
+- `SilkyScrollMousePointerManager.resetForTesting` (`@visibleForTesting`).
+- `SilkyScrollWebManagerInterface.isWebPlatform` for conditional-import–based platform detection.
+- `SilkyEdgeDetector`: sub-pixel edge detection using threshold instead of `toInt()`.
+- State machine `_transitionTo` now guards against Timer creation after dispose.
+- `SilkyScrollController.attach`/`detach` guard against duplicate position registration.
+- Test infrastructure: `test/helpers/test_helpers.dart` shared utilities.
+- New tests for `SilkyScrollAnimator`, `SilkyInputHandler`, `SilkyScrollConfig`, and integration tests (67 total, up from 24).
 
-* TODO: adjusted the interval of the scroll lock timer.
+### Changed
 
-## 1.0.4
+- `kIsWeb` runtime branching in `SilkyInputHandler` replaced with conditional-import pattern via `isWebPlatform`.
+- `ListenableBuilder` rebuild scope reduced: `onAnimationStateChanged` no longer triggers unnecessary widget rebuilds for recoil state.
+- Dispose order in `SilkyScrollState` made deterministic and safe.
+- Edge-detection refactored to switch expression / pattern matching (Dart 3).
+- `SilkyScrollAnimator._handleRecoil` refactored to switch expression.
+- Web helper magic number `Duration(milliseconds: 700)` extracted to `_kOverscrollBehaviorXResetDelay` constant.
+- Lint configuration upgraded from `flutter_lints` to `package:lints/recommended.yaml` with custom rules.
+- Example restructured to `example/lib/main.dart` + `example/pubspec.yaml` (pub.dev guideline).
+- README image paths updated from `Bluebar1/dyn_mouse_scroll` to `Dynaruid/silky_scroll`.
 
-* TODO: changed the method of specifying the scroll duration.
+### Removed
 
-## 1.0.5
+- Legacy duplicate source files under `lib/` root (moved to `lib/src/` in Phase 1).
 
-* TODO: Enhanced scroll behavior for touch interfaces. When the scrollable content reaches the edge during an ongoing
-  scroll gesture, if the parent widget is also scrollable, the scroll momentum is seamlessly transferred to the parent
-  widget.
+### Fixed
 
-## 1.0.6
-
-* TODO: The duration of scroll momentum transferred to the parent widget has been adjusted to behave more naturally.
-
-## 1.0.7
-
-* TODO: adjusted duration of scroll momentum.
-
-## 1.0.8
-
-* TODO: adjusted duration of scroll momentum.
-
-## 1.0.9
-
-* TODO: fixed drag bug.
-
-## 1.0.10
-
-* TODO: updated README.
-
-## 1.0.11
-
-* TODO: updated.
-
-## 1.0.12
-
-* TODO: Added an option to configure whether scroll bubbling is propagated when an inner scroll view reaches its edge
-  within nested scroll views.
-
-## 1.0.13
-
-* TODO: fixed bug about web import.
-
-## 1.0.14
-
-* TODO: Removed usage of `Platform` from `dart:io` due to compatibility issues causing errors on Safari in iOS 18.2.
-
-## 1.0.15
-
-* TODO: dart format
+- `_unlockScroll` now correctly transitions `_physicsPhase` back to `ScrollPhysicsPhase.normal`.
+- `_transitionTo` checks `_disposed` before creating a new Timer.
 
 ## 1.0.16
 
-* TODO: Added support for Android's scroll stretch effect.
+### Added
+
+- Support for Android's scroll stretch effect.
+
+## 1.0.15
+
+### Changed
+
+- Applied dart format.
+
+## 1.0.14
+
+### Fixed
+
+- Removed usage of `Platform` from `dart:io` due to compatibility issues causing errors on Safari in iOS 18.2.
+
+## 1.0.13
+
+### Fixed
+
+- Fixed bug about web import.
+
+## 1.0.12
+
+### Added
+
+- Added an option to configure whether scroll bubbling is propagated when an inner scroll view reaches its edge within nested scroll views.
+
+## 1.0.11
+
+### Changed
+
+- General updates.
+
+## 1.0.10
+
+### Changed
+
+- Updated README.
+
+## 1.0.9
+
+### Fixed
+
+- Fixed drag bug.
+
+## 1.0.8
+
+### Changed
+
+- Adjusted duration of scroll momentum.
+
+## 1.0.7
+
+### Changed
+
+- Adjusted duration of scroll momentum.
+
+## 1.0.6
+
+### Changed
+
+- The duration of scroll momentum transferred to the parent widget has been adjusted to behave more naturally.
+
+## 1.0.5
+
+### Added
+
+- Enhanced scroll behavior for touch interfaces. When the scrollable content reaches the edge during an ongoing scroll gesture, if the parent widget is also scrollable, the scroll momentum is seamlessly transferred to the parent widget.
+
+## 1.0.4
+
+### Changed
+
+- Changed the method of specifying the scroll duration.
+
+## 1.0.3
+
+### Changed
+
+- Adjusted the interval of the scroll lock timer.
+
+## 1.0.2
+
+### Added
+
+- Web support improvements.
+
+## 1.0.1
+
+### Added
+
+- Web support.
+
+## 1.0.0
+
+### Added
+
+- Initial release.
