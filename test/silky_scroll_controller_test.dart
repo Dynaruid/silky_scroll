@@ -24,11 +24,6 @@ void main() {
       expect(silkyController.clientController, same(clientController));
     });
 
-    test('createScrollPosition returns SilkyScrollPosition', () {
-      // We can only call createScrollPosition inside a real scrollable,
-      // so use a widget test instead.
-    });
-
     test('setPointerDeviceKind is no-op when no position exists', () {
       // Should not throw when currentSilkyScrollPosition is null
       silkyController.setPointerDeviceKind(PointerDeviceKind.mouse);

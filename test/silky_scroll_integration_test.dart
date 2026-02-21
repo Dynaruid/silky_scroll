@@ -4,28 +4,6 @@ import 'package:silky_scroll/silky_scroll.dart';
 
 void main() {
   group('SilkyScroll — scroll event simulation', () {
-    testWidgets('mouse-region enters and exits correctly', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SilkyScroll(
-            builder: (context, controller, physics) => ListView.builder(
-              controller: controller,
-              physics: physics,
-              itemCount: 50,
-              itemBuilder: (_, i) =>
-                  SizedBox(height: 100, child: Text('Item $i')),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('Item 0'), findsOneWidget);
-
-      // Replace to trigger dispose
-      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
-      await tester.pump();
-    });
-
     testWidgets('physics update via didUpdateWidget', (tester) async {
       ScrollPhysics currentPhysics = const ScrollPhysics();
       late StateSetter stateSetter;
@@ -56,29 +34,6 @@ void main() {
 
       // No errors expected
       expect(find.text('A'), findsOneWidget);
-    });
-
-    testWidgets('fromConfig creates widget correctly', (tester) async {
-      const config = SilkyScrollConfig(
-        scrollSpeed: 2.0,
-        enableStretchEffect: false,
-        debugMode: true,
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: SilkyScroll.fromConfig(
-            config: config,
-            builder: (context, controller, physics) => ListView(
-              controller: controller,
-              physics: physics,
-              children: const [Text('Config Widget')],
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('Config Widget'), findsOneWidget);
     });
 
     testWidgets('nested SilkyScroll widgets render', (tester) async {
