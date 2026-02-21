@@ -1,147 +1,88 @@
 import 'package:flutter/material.dart';
-import 'package:silky_scroll/silky_scroll.dart';
+import 'pages/basic_scroll_page.dart';
+import 'pages/nested_scroll_page.dart';
+import 'pages/horizontal_scroll_page.dart';
+import 'pages/config_scroll_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const SilkyScrollExampleApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SilkyScrollExampleApp extends StatelessWidget {
+  const SilkyScrollExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Scroll Example',
+      title: 'Silky Scroll Example',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF132233)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E),
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
       ),
-      home: const ScrollExample(),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: const MainScreen(),
     );
   }
 }
 
-class ScrollExample extends StatefulWidget {
-  const ScrollExample({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<ScrollExample> createState() => _ScrollExampleState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _ScrollExampleState extends State<ScrollExample> {
-  late final ScrollController _scrollController;
+class _MainScreenState extends State<MainScreen> {
+  int _currentIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(() {
-      final double offset = _scrollController.offset;
-      debugPrint("scrollController offset is $offset");
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
+  static const _pages = <Widget>[
+    BasicScrollPage(),
+    NestedScrollPage(),
+    HorizontalScrollPage(),
+    ConfigScrollPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      body: SilkyScroll(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
-        silkyScrollDuration: const Duration(milliseconds: 2000),
-        direction: Axis.vertical,
-        builder: (context, controller, physics) {
-          return ListView.separated(
-            controller: controller,
-            physics: physics,
-            scrollDirection: Axis.vertical,
-            itemBuilder: (BuildContext context, int index) {
-              return InnerScrollingItem(height: 200, number: index);
-            },
-            separatorBuilder: (BuildContext context, int index) {
-              return const Padding(
-                padding: EdgeInsets.fromLTRB(20, 5, 20, 5),
-                child: Divider(color: Colors.black45),
-              );
-            },
-            itemCount: 50,
-          );
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
         },
-      ),
-    );
-  }
-}
-
-class InnerScrollingItem extends StatelessWidget {
-  const InnerScrollingItem({
-    super.key,
-    required this.height,
-    required this.number,
-  });
-
-  final double height;
-  final int number;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: height),
-      child: Card(
-        color: Theme.of(context).colorScheme.onPrimary,
-        elevation: 12,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              Text("Test Item $number", style: const TextStyle(fontSize: 20)),
-              Expanded(
-                child: SilkyScroll(
-                  builder: (context, controller, physics) {
-                    return ListView.separated(
-                      controller: controller,
-                      physics: physics,
-                      itemBuilder: (BuildContext context, int index) {
-                        final Color color;
-                        if (index % 2 == 0) {
-                          color = Theme.of(
-                            context,
-                          ).colorScheme.secondaryContainer;
-                        } else {
-                          color = Theme.of(context).colorScheme.errorContainer;
-                        }
-
-                        return SizedBox(
-                          height: 60,
-                          child: Card(
-                            elevation: 6,
-                            margin: EdgeInsets.zero,
-                            color: color,
-                            child: Center(
-                              child: Text(
-                                "inner item number: $index",
-                                style: const TextStyle(fontSize: 17),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      separatorBuilder: (BuildContext context, int index) {
-                        return const Divider(color: Colors.black45);
-                      },
-                      itemCount: 20,
-                    );
-                  },
-                ),
-              ),
-            ],
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.list),
+            selectedIcon: Icon(Icons.list_alt),
+            label: 'Basic',
           ),
-        ),
+          NavigationDestination(
+            icon: Icon(Icons.layers_outlined),
+            selectedIcon: Icon(Icons.layers),
+            label: 'Nested',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.swap_horiz),
+            selectedIcon: Icon(Icons.swap_horiz_rounded),
+            label: 'Horizontal',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune),
+            label: 'Config',
+          ),
+        ],
       ),
     );
   }

@@ -11,3 +11,7 @@ dependencies:
     sdk: flutter
   silky_scroll:
     path: ../
+  cupertino_icons: ^1.0.8
+
+flutter:
+  uses-material-design: true
