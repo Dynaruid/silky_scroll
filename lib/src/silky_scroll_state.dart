@@ -257,7 +257,12 @@ class SilkyScrollState extends ChangeNotifier
   @override
   void handleTouchScroll(double delta) {
     lastDelta += delta;
-    if (_physicsPhase == ScrollPhysicsPhase.edgeCheckPending) return;
+    // Don't start a new edge-check timer when an edge-lock or
+    // overscroll-lock timer is already running — doing so would cancel
+    // the pending _unlockScroll callback and leave currentScrollPhysics
+    // permanently stuck as BlockedScrollPhysics (NeverScrollableScrollPhysics),
+    // completely disabling touch and trackpad scrolling.
+    if (_physicsPhase != ScrollPhysicsPhase.normal) return;
 
     _transitionTo(
       ScrollPhysicsPhase.edgeCheckPending,

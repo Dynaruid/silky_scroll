@@ -134,6 +134,66 @@ void main() {
       expect(state.physicsPhase, ScrollPhysicsPhase.normal);
     });
 
+    testWidgets(
+      'continued touch scroll during edgeLocked does not cancel unlock timer',
+      (tester) async {
+        state = _createState(
+          manager: manager,
+          edgeLockingDelay: const Duration(milliseconds: 300),
+        );
+        await tester.pumpWidget(
+          _buildScrollable(controller: state.clientController),
+        );
+
+        // Trigger edge lock at top
+        state.handleTouchScroll(-10.0);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(state.isEdgeLocked, isTrue);
+
+        // Simulate continued touch scrolling while locked — this previously
+        // cancelled the unlock timer, leaving physics permanently blocked.
+        state.handleTouchScroll(-5.0);
+        state.handleTouchScroll(-8.0);
+        await tester.pump(const Duration(milliseconds: 50));
+        state.handleTouchScroll(-3.0);
+
+        // Phase should still be edgeLocked, not edgeCheckPending
+        expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
+
+        // Wait for the original edgeLockingDelay to expire
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Must unlock — previously this would stay locked forever
+        expect(state.isEdgeLocked, isFalse);
+        expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+      },
+    );
+
+    testWidgets(
+      'continued touch scroll during overscrollLocked does not cancel timer',
+      (tester) async {
+        state = _createState(manager: manager);
+        await tester.pumpWidget(
+          _buildScrollable(controller: state.clientController),
+        );
+
+        state.isOverScrolling = true;
+        state.beginOverscrollLock(const Duration(milliseconds: 200));
+        expect(state.isOverscrollLocked, isTrue);
+
+        // Simulate touch scrolling during overscroll lock
+        state.handleTouchScroll(5.0);
+        state.handleTouchScroll(3.0);
+
+        // Should remain overscrollLocked
+        expect(state.physicsPhase, ScrollPhysicsPhase.overscrollLocked);
+
+        // Wait for overscroll lock to expire
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+      },
+    );
+
     testWidgets('beginOverscrollLock transitions to overscrollLocked', (
       tester,
     ) async {
