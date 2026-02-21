@@ -1,0 +1,17 @@
+name: silky_scroll_example
+description: Example app demonstrating the silky_scroll package.
+publish_to: none
+
+environment:
+  sdk: ^3.10.7
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  silky_scroll:
+    path: ../
+  cupertino_icons: ^1.0.8
+
+flutter:
+  uses-material-design: true
