@@ -149,6 +149,8 @@ class _SilkyScrollState extends State<SilkyScroll> {
       isVertical: widget.direction == Axis.vertical,
       enableScrollBubbling: widget.enableScrollBubbling,
       silkyScrollMousePointerManager: silkyScrollMousePointerManager,
+      onScroll: widget.onScroll,
+      onEdgeOverScroll: widget.onEdgeOverScroll,
       debugMode: widget.debugMode,
     );
     currentPhysics = widget.physics;

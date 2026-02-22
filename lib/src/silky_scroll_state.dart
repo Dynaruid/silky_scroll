@@ -233,6 +233,7 @@ class SilkyScrollState extends ChangeNotifier
     if (edgeResult != 0 &&
         currentScrollPhysics is! BlockedScrollPhysics &&
         !isOverScrolling) {
+      onEdgeOverScroll?.call(lastDelta);
       currentScrollPhysics = _blockedPhysics;
       notifyListeners();
 
@@ -304,6 +305,7 @@ class SilkyScrollState extends ChangeNotifier
     if (instanceKey == silkyScrollMousePointerManager.reserveKey) {
       if (!isOnSilkyScrolling) {
         if (needBlocking) {
+          if (isEdge) onEdgeOverScroll?.call(delta);
           silkyScrollMousePointerManager.reservingKey(instanceKey);
           return;
         }
@@ -312,6 +314,7 @@ class SilkyScrollState extends ChangeNotifier
       }
     }
     if (!isOnSilkyScrolling && needBlocking) {
+      if (isEdge) onEdgeOverScroll?.call(delta);
       silkyScrollMousePointerManager.reservingKey(instanceKey);
       return;
     }

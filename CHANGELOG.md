@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.0.1
+
+### Fixed
+
+- `onScroll` and `onEdgeOverScroll` callbacks were not passed from `SilkyScroll` widget to `SilkyScrollState`, causing them to always be `null`.
+- `onEdgeOverScroll` was never invoked; it is now called when mouse-wheel or touch/trackpad scroll reaches an edge.
+
 ## 2.0.0
 
 ### Breaking
