@@ -130,7 +130,8 @@ class SilkyScroll extends StatefulWidget {
   State<SilkyScroll> createState() => _SilkyScrollState();
 }
 
-class _SilkyScrollState extends State<SilkyScroll> {
+class _SilkyScrollState extends State<SilkyScroll>
+    with TickerProviderStateMixin {
   late final SilkyScrollState silkyScrollState;
   late final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
   late ScrollPhysics currentPhysics;
@@ -152,8 +153,10 @@ class _SilkyScrollState extends State<SilkyScroll> {
       onScroll: widget.onScroll,
       onEdgeOverScroll: widget.onEdgeOverScroll,
       debugMode: widget.debugMode,
+      vsync: this,
     );
     currentPhysics = widget.physics;
+    silkyScrollState.addListener(_onPhysicsChanged);
   }
 
   @override
@@ -161,11 +164,24 @@ class _SilkyScrollState extends State<SilkyScroll> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.physics != widget.physics) {
       silkyScrollState.setWidgetScrollPhysics(scrollPhysics: widget.physics);
+      currentPhysics = widget.physics;
+    }
+  }
+
+  /// Called whenever [SilkyScrollState] fires [notifyListeners].
+  /// Only triggers a rebuild when the physics reference actually changed.
+  void _onPhysicsChanged() {
+    final newPhysics = silkyScrollState.currentScrollPhysics;
+    if (newPhysics != currentPhysics) {
+      setState(() {
+        currentPhysics = newPhysics;
+      });
     }
   }
 
   @override
   void dispose() {
+    silkyScrollState.removeListener(_onPhysicsChanged);
     silkyScrollState.dispose();
     super.dispose();
   }
@@ -248,82 +264,70 @@ class _SilkyScrollState extends State<SilkyScroll> {
     );
     return _SilkyScrollScope(
       state: silkyScrollState,
-      child: ListenableBuilder(
-        listenable: silkyScrollState,
-        builder: (BuildContext context, Widget? child) {
-          currentPhysics = silkyScrollState.currentScrollPhysics;
-          return MouseRegion(
-            onEnter: (e) {
-              silkyScrollMousePointerManager.enteredKey(
-                silkyScrollState.instanceKey,
-              );
-            },
-            onExit: (e) {
-              silkyScrollMousePointerManager.exitKey(
-                silkyScrollState.instanceKey,
-              );
-            },
-            opaque: false,
-            child: NotificationListener<OverscrollIndicatorNotification>(
-              onNotification: (OverscrollIndicatorNotification overscroll) {
-                if (silkyScrollState.isEdgeLocked ||
-                    silkyScrollState.isOverscrollLocked ||
-                    !widget.enableStretchEffect) {
-                  overscroll.disallowIndicator();
-                  return false;
-                }
-                silkyScrollState.isOverScrolling = true;
-                return true;
-              },
-              child: Listener(
-                onPointerHover: (PointerHoverEvent signalEvent) {
-                  _handleTrackpadCheck(signalEvent.kind);
-                },
-                onPointerSignal: _onPointerSignal,
-                onPointerMove: (PointerMoveEvent event) {
-                  if (event.kind == PointerDeviceKind.touch) {
-                    silkyScrollState.setPointerDeviceKind(
-                      PointerDeviceKind.touch,
-                    );
-                    silkyScrollState.triggerTouchAction(
-                      event.delta,
-                      PointerDeviceKind.touch,
-                    );
-                  }
-                },
-                onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
-                  silkyScrollState.setPointerDeviceKind(
-                    PointerDeviceKind.trackpad,
-                  );
-                  silkyScrollMousePointerManager.markPanZoomActivity();
-                  silkyScrollState.cancelSilkyScroll();
-
-                  silkyScrollState.triggerTouchAction(
-                    event.panDelta,
-                    PointerDeviceKind.trackpad,
-                  );
-                },
-                onPointerPanZoomEnd: (PointerPanZoomEndEvent event) {
-                  silkyScrollMousePointerManager.clearPanZoomMemory();
-                },
-                onPointerUp: (PointerUpEvent event) {
-                  if (event.kind == PointerDeviceKind.touch) {
-                    if (silkyScrollState.isOverScrolling) {
-                      silkyScrollState.beginOverscrollLock(
-                        widget.overScrollingLockingDelay,
-                      );
-                    }
-                  }
-                },
-                child: widget.builder(
-                  context,
-                  silkyScrollState.silkyScrollController,
-                  currentPhysics,
-                ),
-              ),
-            ),
+      child: MouseRegion(
+        onEnter: (e) {
+          silkyScrollMousePointerManager.enteredKey(
+            silkyScrollState.instanceKey,
           );
         },
+        onExit: (e) {
+          silkyScrollMousePointerManager.exitKey(silkyScrollState.instanceKey);
+        },
+        opaque: false,
+        child: NotificationListener<OverscrollIndicatorNotification>(
+          onNotification: (OverscrollIndicatorNotification overscroll) {
+            if (silkyScrollState.isEdgeLocked ||
+                silkyScrollState.isOverscrollLocked ||
+                !widget.enableStretchEffect) {
+              overscroll.disallowIndicator();
+              return false;
+            }
+            silkyScrollState.isOverScrolling = true;
+            return true;
+          },
+          child: Listener(
+            onPointerHover: (PointerHoverEvent signalEvent) {
+              _handleTrackpadCheck(signalEvent.kind);
+            },
+            onPointerSignal: _onPointerSignal,
+            onPointerMove: (PointerMoveEvent event) {
+              if (event.kind == PointerDeviceKind.touch) {
+                silkyScrollState.setPointerDeviceKind(PointerDeviceKind.touch);
+                silkyScrollState.triggerTouchAction(
+                  event.delta,
+                  PointerDeviceKind.touch,
+                );
+              }
+            },
+            onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+              silkyScrollState.setPointerDeviceKind(PointerDeviceKind.trackpad);
+              silkyScrollMousePointerManager.markPanZoomActivity();
+              silkyScrollState.cancelSilkyScroll();
+
+              silkyScrollState.triggerTouchAction(
+                event.panDelta,
+                PointerDeviceKind.trackpad,
+              );
+            },
+            onPointerPanZoomEnd: (PointerPanZoomEndEvent event) {
+              silkyScrollMousePointerManager.clearPanZoomMemory();
+            },
+            onPointerUp: (PointerUpEvent event) {
+              if (event.kind == PointerDeviceKind.touch) {
+                if (silkyScrollState.isOverScrolling) {
+                  silkyScrollState.beginOverscrollLock(
+                    widget.overScrollingLockingDelay,
+                  );
+                }
+              }
+            },
+            child: widget.builder(
+              context,
+              silkyScrollState.silkyScrollController,
+              currentPhysics,
+            ),
+          ),
+        ),
       ),
     );
   }

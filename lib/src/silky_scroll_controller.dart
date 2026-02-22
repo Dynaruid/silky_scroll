@@ -67,6 +67,23 @@ final class SilkyScrollPosition extends ScrollPositionWithSingleContext {
 
   PointerDeviceKind kind = PointerDeviceKind.trackpad;
 
+  /// When `true`, [goBallistic] is suppressed to prevent Flutter's
+  /// physics-based spring simulation from fighting with the
+  /// Ticker-driven smooth-scroll / recoil animation.
+  ///
+  /// Without this, every [jumpTo] call during overscroll triggers
+  /// [BouncingScrollPhysics.createBallisticSimulation], which starts
+  /// a spring that pulls the offset back — while our Ticker pushes
+  /// it forward.  The two fight each other every frame, producing
+  /// visible stutter.
+  bool silkyTickerActive = false;
+
+  @override
+  void goBallistic(double velocity) {
+    if (silkyTickerActive) return;
+    super.goBallistic(velocity);
+  }
+
   @override
   void pointerScroll(double delta) {
     if (kind != PointerDeviceKind.mouse) {

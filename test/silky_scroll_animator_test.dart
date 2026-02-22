@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silky_scroll/src/silky_scroll_animator.dart';
+
+/// Minimal [TickerProvider] for tests.
+class _TestVSync implements TickerProvider {
+  @override
+  Ticker createTicker(TickerCallback onTick) => Ticker(onTick);
+}
 
 /// Minimal delegate for testing [SilkyScrollAnimator] in isolation.
 class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
@@ -33,11 +40,21 @@ class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
   @override
   bool isDisposed = false;
 
+  @override
+  bool enableScrollBubbling = false;
+
   int animationStateChangedCount = 0;
 
   @override
   void onAnimationStateChanged() {
     animationStateChangedCount++;
+  }
+
+  bool silkyTickerActiveState = false;
+
+  @override
+  void setSilkyTickerActive(bool active) {
+    silkyTickerActiveState = active;
   }
 }
 
@@ -50,16 +67,10 @@ void main() {
     setUp(() {
       controller = ScrollController();
       delegate = _FakeAnimatorDelegate(clientController: controller);
-      animator = SilkyScrollAnimator(delegate);
     });
 
     tearDown(() {
       controller.dispose();
-    });
-
-    test('recoilDurationMs is computed from silkyScrollDuration', () {
-      // 700 * 0.8 = 560
-      expect(animator.recoilDurationMs, 560);
     });
 
     testWidgets('animateToScroll sets isOnSilkyScrolling to true', (
@@ -75,12 +86,14 @@ void main() {
         ),
       );
 
+      animator = SilkyScrollAnimator(delegate, _TestVSync());
       animator.animateToScroll(100, 1.0);
       expect(delegate.isOnSilkyScrolling, isTrue);
 
-      // Let animation complete
+      // Let Ticker-based animation complete
       await tester.pumpAndSettle();
       expect(delegate.isOnSilkyScrolling, isFalse);
+      animator.dispose();
     });
 
     testWidgets('animateToScroll updates futurePosition', (tester) async {
@@ -94,11 +107,13 @@ void main() {
         ),
       );
 
+      animator = SilkyScrollAnimator(delegate, _TestVSync());
       animator.animateToScroll(100, 1.0);
       // futurePosition = offset(0) + 100 * 1.0 * 0.5 = 50
       expect(delegate.futurePosition, 50.0);
 
       await tester.pumpAndSettle();
+      animator.dispose();
     });
 
     testWidgets(
@@ -114,12 +129,14 @@ void main() {
           ),
         );
 
+        animator = SilkyScrollAnimator(delegate, _TestVSync());
         final maxExtent = controller.position.maxScrollExtent;
         // Scroll way past max
         animator.animateToScroll(maxExtent * 10, 1.0);
         expect(delegate.futurePosition, maxExtent);
 
         await tester.pumpAndSettle();
+        animator.dispose();
       },
     );
 
@@ -136,6 +153,8 @@ void main() {
         ),
       );
 
+      animator = SilkyScrollAnimator(delegate, _TestVSync());
+
       // Scroll down
       animator.animateToScroll(100, 1.0);
       expect(delegate.prevDeltaPositive, isTrue);
@@ -147,6 +166,27 @@ void main() {
       expect(delegate.prevDeltaPositive, isFalse);
 
       await tester.pumpAndSettle();
+      animator.dispose();
+    });
+
+    testWidgets('cancel stops animation immediately', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ListView.builder(
+            controller: controller,
+            itemCount: 50,
+            itemBuilder: (_, i) => SizedBox(height: 100, child: Text('$i')),
+          ),
+        ),
+      );
+
+      animator = SilkyScrollAnimator(delegate, _TestVSync());
+      animator.animateToScroll(100, 1.0);
+      expect(delegate.isOnSilkyScrolling, isTrue);
+
+      animator.cancel();
+      expect(delegate.isOnSilkyScrolling, isFalse);
+      animator.dispose();
     });
   });
 }

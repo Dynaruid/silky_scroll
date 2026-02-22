@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'silky_scroll_mouse_pointer_manager.dart';
 import 'silky_scroll_controller.dart';
 import 'blocked_scroll_physics.dart';
@@ -10,7 +11,7 @@ import 'silky_scroll_animator.dart';
 import 'silky_input_handler.dart';
 
 /// Magic number constants for scroll behavior tuning.
-const double _kBubblingDeltaMultiplier = 2.8;
+const double _kBubblingDeltaMultiplier = 2;
 const int _kScrollDisableCheckDelayMs = 80;
 const int _kMinManualScrollDurationMs = 250;
 const int _kMaxManualScrollDurationMs = 800;
@@ -54,6 +55,7 @@ class SilkyScrollState extends ChangeNotifier
     this.onEdgeOverScroll,
     required Function(PointerDeviceKind)? setManualPointerDeviceKind,
     required this.silkyScrollMousePointerManager,
+    required TickerProvider vsync,
   }) {
     currentScrollPhysics = widgetScrollPhysics;
     isPlatformBouncingScrollPhysics =
@@ -78,7 +80,7 @@ class SilkyScrollState extends ChangeNotifier
       setPointerDeviceKind = setManualPointerDeviceKind;
     }
 
-    _animator = SilkyScrollAnimator(this);
+    _animator = SilkyScrollAnimator(this, vsync);
     _inputHandler = SilkyInputHandler(this);
   }
 
@@ -100,6 +102,7 @@ class SilkyScrollState extends ChangeNotifier
   late ScrollPhysics widgetScrollPhysics;
   final BlockedScrollPhysics _blockedPhysics = const BlockedScrollPhysics();
 
+  @override
   final bool enableScrollBubbling;
   @override
   final void Function(double delta)? onScroll;
@@ -157,6 +160,12 @@ class SilkyScrollState extends ChangeNotifier
     // only physics changes need notifyListeners.
   }
 
+  @override
+  void setSilkyTickerActive(bool active) {
+    silkyScrollController.currentSilkyScrollPosition?.silkyTickerActive =
+        active;
+  }
+
   // ── SilkyInputHandlerDelegate ────────────────────────────────────
   @override
   bool get isWebPlatform =>
@@ -184,9 +193,7 @@ class SilkyScrollState extends ChangeNotifier
   /// takes effect immediately.
   void cancelSilkyScroll() {
     if (isOnSilkyScrolling && clientController.hasClients) {
-      // jumpTo cancels the in-progress animateTo (DrivenScrollActivity → Idle)
-      clientController.jumpTo(clientController.offset);
-      isOnSilkyScrolling = false;
+      _animator.cancel();
       futurePosition = clientController.offset;
     }
   }
@@ -413,11 +420,14 @@ class SilkyScrollState extends ChangeNotifier
     // 4. Detach our key from the pointer manager.
     silkyScrollMousePointerManager.detachKey(instanceKey);
 
-    // 5. Dispose silkyScrollController (detaches positions from both
+    // 5. Dispose the animator (stops Ticker).
+    _animator.dispose();
+
+    // 6. Dispose silkyScrollController (detaches positions from both
     //    controllers via the guarded attach/detach overrides).
     silkyScrollController.dispose();
 
-    // 6. Only dispose the client controller if we own it.
+    // 7. Only dispose the client controller if we own it.
     if (isControllerOwn) {
       clientController.dispose();
     }

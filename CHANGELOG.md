@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.0.2
+
+### Changed
+
+- **Ticker-based animation engine**: Replaced per-event `controller.animateTo()` with a single `Ticker` + `jumpTo()` loop using frame-rate-independent exponential smoothing. Eliminates the stutter caused by repeatedly cancelling and restarting easing curves on rapid mouse-wheel input.
+- **Targeted rebuild**: Replaced `ListenableBuilder` (which rebuilt the entire widget subtree on every `notifyListeners()`) with a dedicated `_onPhysicsChanged` listener that calls `setState` only when the `ScrollPhysics` reference actually changes.
+- **Recoil animation**: Bounce-back (recoil) to edge now runs inside the same Ticker using `Curves.easeInOutSine` interpolation, avoiding a separate `animateTo()` call that could conflict with ongoing scroll animations.
+
+### Fixed
+
+- **Overscroll bounce-back stutter**: Added `silkyTickerActive` flag to `SilkyScrollPosition` that suppresses `goBallistic()` while the Ticker is running. Previously, each `jumpTo()` during overscroll triggered Flutter's `BouncingScrollPhysics` spring simulation, which fought with the Ticker every frame — causing visible jitter at both top and bottom edges.
+
 ## 2.0.1
 
 ### Fixed

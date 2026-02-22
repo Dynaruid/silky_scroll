@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silky_scroll/src/silky_scroll_state.dart';
 import 'package:silky_scroll/src/silky_scroll_mouse_pointer_manager.dart';
+
+/// Minimal [TickerProvider] for tests.
+class _TestVSync implements TickerProvider {
+  @override
+  Ticker createTicker(TickerCallback onTick) => Ticker(onTick);
+}
 
 /// Helper to build a minimal widget tree with a [SilkyScrollState].
 Widget _buildScrollable({
@@ -29,6 +36,7 @@ SilkyScrollState _createState({
   bool enableScrollBubbling = false,
   bool debugMode = false,
   SilkyScrollMousePointerManager? manager,
+  TickerProvider? vsync,
 }) {
   manager ??= SilkyScrollMousePointerManager();
   return SilkyScrollState(
@@ -43,6 +51,7 @@ SilkyScrollState _createState({
     debugMode: debugMode,
     setManualPointerDeviceKind: null,
     silkyScrollMousePointerManager: manager,
+    vsync: vsync ?? _TestVSync(),
   );
 }
 
