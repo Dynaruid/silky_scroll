@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'silky_scroll_mouse_pointer_manager.dart';
 import 'silky_scroll_controller.dart';
 import 'blocked_scroll_physics.dart';

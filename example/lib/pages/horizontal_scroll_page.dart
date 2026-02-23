@@ -60,7 +60,7 @@ class _HorizontalScrollPageState extends State<HorizontalScrollPage> {
         ],
       ),
       body: SilkyScroll(
-        key: ValueKey('outer_v_$_stretch\_$_speed'),
+        key: ValueKey('outer_v_${_stretch}_$_speed'),
         physics: const BouncingScrollPhysics(),
         enableStretchEffect: _stretch,
         scrollSpeed: _speed,

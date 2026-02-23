@@ -288,7 +288,7 @@ void main() {
 
       // ChangeNotifier throws FlutterError when notifyListeners
       // is called after dispose.
-      expect(() => state.notifyListeners(), throwsFlutterError);
+      expect(state.notifyListeners, throwsFlutterError);
       expect(listenerCalled, isFalse);
     });
 
@@ -318,7 +318,7 @@ void main() {
       expect(state.isControllerOwn, isFalse);
       state.dispose();
       // External controller should still be usable after state dispose
-      expect(() => controller.dispose(), returnsNormally);
+      expect(controller.dispose, returnsNormally);
     });
   });
 

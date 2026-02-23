@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.0.3
+
+### Fixed
+
+- Fixed `include_file_not_found` warning in example `analysis_options.yaml` by replacing deprecated `flutter_lints` with `lints`.
+- Removed unnecessary `package:flutter/scheduler.dart` import in `SilkyScrollState` (already provided by `material.dart`).
+- Removed unused `package:flutter/foundation.dart` import in input handler tests.
+- Replaced unnecessary lambdas with tear-offs in state tests.
+
 ## 2.0.2
 
 ### Changed

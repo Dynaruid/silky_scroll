@@ -99,7 +99,7 @@ class _NestedScrollPageState extends State<NestedScrollPage> {
           // ── Outer scrollable ──────────────────────────────────────────
           Expanded(
             child: SilkyScroll(
-              key: ValueKey('outer_$_bubbling\_$_stretch'),
+              key: ValueKey('outer_${_bubbling}_$_stretch'),
               physics: const BouncingScrollPhysics(),
               enableStretchEffect: _stretch,
               enableScrollBubbling: _bubbling,
