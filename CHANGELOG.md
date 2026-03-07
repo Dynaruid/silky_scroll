@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.0
+
+### Breaking
+
+- **Builder signature changed**: `SilkyScrollWidgetBuilder` now receives a 4th parameter `PointerDeviceKind? pointerDeviceKind`, allowing widgets to adapt their behavior based on the detected input device.
+- **Removed bubbling option**: Scroll bubbling to parent views is now seamlessly integrated into the default edge-locking logic, providing a much more natural nested-scroll experience without any configuration.
+
+### Added
+
+- `decayLogFactor` parameter — controls the exponential-decay log factor for smooth-scroll convergence speed (default: `12`).
+- `recoilDurationSec` parameter — controls the duration of the bounce-back (recoil) animation in seconds (default: `0.2`).
+- `setManualPointerDeviceKind` callback — allows manually overriding the detected pointer device kind for custom input handling.
+- Exported `kDefaultDecayLogFactor` and `kDefaultRecoilDurationSec` constants from barrel file.
+
+### Changed
+
+- Scroll bubbling is now handled automatically within the core edge-locking state machine, eliminating the need for a separate configuration option and delivering smoother transitions in nested scroll views.
+- Recoil (bounce-back) animation and overshoot clamping now only activate when the widget's scroll physics is `BouncingScrollPhysics`. Non-bouncing physics (e.g. `ClampingScrollPhysics`) no longer overshoot scroll extents or trigger recoil.
+
 ## 2.0.3
 
 ### Fixed

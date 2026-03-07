@@ -15,7 +15,7 @@ void main() {
               stateSetter = setState;
               return SilkyScroll(
                 physics: currentPhysics,
-                builder: (context, controller, physics) => ListView(
+                builder: (context, controller, physics, _) => ListView(
                   controller: controller,
                   physics: physics,
                   children: const [SizedBox(height: 100, child: Text('A'))],
@@ -40,14 +40,14 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: SilkyScroll(
-            builder: (context, controller, physics) => ListView(
+            builder: (context, controller, physics, _) => ListView(
               controller: controller,
               physics: physics,
               children: [
                 SizedBox(
                   height: 200,
                   child: SilkyScroll(
-                    builder: (context, innerCtrl, innerPhysics) =>
+                    builder: (context, innerCtrl, innerPhysics, _) =>
                         ListView.builder(
                           controller: innerCtrl,
                           physics: innerPhysics,

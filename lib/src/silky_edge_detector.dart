@@ -12,23 +12,26 @@ const double _kEdgeThreshold = 0.5;
 final class SilkyEdgeDetector {
   const SilkyEdgeDetector();
 
-  /// Returns `-1` if at the top/start edge, `1` if at the bottom/end edge,
-  /// and `0` if not at an edge.
-  int checkOffsetAtEdge(double verticalDelta, ScrollController controller) {
-    if (!controller.hasClients) return 0;
+  /// Returns `-1` if at the top/start edge with velocity toward it,
+  /// `1` if at the bottom/end edge with velocity toward it,
+  /// and `0` otherwise.
+  ///
+  /// [velocity] is the signed scroll velocity (px / frame).  Only the
+  /// sign selects which edge to test; the magnitude is clamped to a
+  /// small lookahead window.  Velocities below 0.5 px/frame are
+  /// treated as stationary and always return `0`.
+  int checkOffsetAtEdge(double velocity, ScrollController controller) {
+    if (!controller.hasClients || velocity.abs() < _kEdgeThreshold) return 0;
 
     final double offset = controller.offset;
     final double maxExtent = controller.position.maxScrollExtent;
 
-    return switch (verticalDelta) {
-      final d when d.isNegative =>
-        (max(d, -2) + offset) < _kEdgeThreshold ? -1 : 0,
-      final d => () {
-        final dest = min(d, 2) + offset;
-        return (dest - maxExtent).abs() < _kEdgeThreshold || dest > maxExtent
-            ? 1
-            : 0;
-      }(),
-    };
+    if (velocity < 0) {
+      return (max(velocity, -2) + offset) < _kEdgeThreshold ? -1 : 0;
+    }
+    final double dest = min(velocity, 2) + offset;
+    return (dest - maxExtent).abs() < _kEdgeThreshold || dest > maxExtent
+        ? 1
+        : 0;
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'silky_scroll_animator.dart';
 
 /// Configuration data class that groups [SilkyScroll] scroll-behavior
 /// parameters into a single object.
@@ -29,7 +30,8 @@ final class SilkyScrollConfig {
     this.edgeLockingDelay = const Duration(milliseconds: 650),
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
-    this.enableScrollBubbling = false,
+    this.decayLogFactor = kDefaultDecayLogFactor,
+    this.recoilDurationSec = kDefaultRecoilDurationSec,
     this.debugMode = false,
   });
 
@@ -51,9 +53,11 @@ final class SilkyScrollConfig {
   /// Whether to allow the platform stretch / glow overscroll effect.
   final bool enableStretchEffect;
 
-  /// Whether nested scroll views should bubble scroll momentum
-  /// to the parent when they reach their edge.
-  final bool enableScrollBubbling;
+  /// Exponential-decay log factor for the smooth-scroll animation.
+  final double decayLogFactor;
+
+  /// Duration of the recoil (bounce-back) animation in seconds.
+  final double recoilDurationSec;
 
   /// Enables debug logging.
   final bool debugMode;
@@ -74,7 +78,8 @@ final class SilkyScrollConfig {
     Duration? edgeLockingDelay,
     Duration? overScrollingLockingDelay,
     bool? enableStretchEffect,
-    bool? enableScrollBubbling,
+    double? decayLogFactor,
+    double? recoilDurationSec,
     bool? debugMode,
   }) {
     return SilkyScrollConfig(
@@ -87,7 +92,8 @@ final class SilkyScrollConfig {
       overScrollingLockingDelay:
           overScrollingLockingDelay ?? this.overScrollingLockingDelay,
       enableStretchEffect: enableStretchEffect ?? this.enableStretchEffect,
-      enableScrollBubbling: enableScrollBubbling ?? this.enableScrollBubbling,
+      decayLogFactor: decayLogFactor ?? this.decayLogFactor,
+      recoilDurationSec: recoilDurationSec ?? this.recoilDurationSec,
       debugMode: debugMode ?? this.debugMode,
     );
   }
@@ -105,7 +111,8 @@ final class SilkyScrollConfig {
           edgeLockingDelay == other.edgeLockingDelay &&
           overScrollingLockingDelay == other.overScrollingLockingDelay &&
           enableStretchEffect == other.enableStretchEffect &&
-          enableScrollBubbling == other.enableScrollBubbling &&
+          decayLogFactor == other.decayLogFactor &&
+          recoilDurationSec == other.recoilDurationSec &&
           debugMode == other.debugMode;
 
   @override
@@ -118,7 +125,8 @@ final class SilkyScrollConfig {
     edgeLockingDelay,
     overScrollingLockingDelay,
     enableStretchEffect,
-    enableScrollBubbling,
+    decayLogFactor,
+    recoilDurationSec,
     debugMode,
   );
 
@@ -131,6 +139,7 @@ final class SilkyScrollConfig {
       'direction: $direction, '
       'edgeLockingDelay: $edgeLockingDelay, '
       'enableStretchEffect: $enableStretchEffect, '
-      'enableScrollBubbling: $enableScrollBubbling, '
+      'decayLogFactor: $decayLogFactor, '
+      'recoilDurationSec: $recoilDurationSec, '
       'debugMode: $debugMode)';
 }

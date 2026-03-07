@@ -8,7 +8,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: SilkyScroll(
-            builder: (context, controller, physics) => ListView(
+            builder: (context, controller, physics, _) => ListView(
               controller: controller,
               physics: physics,
               children: const [Text('Hello Silky')],
@@ -26,7 +26,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: SilkyScroll(
-            builder: (context, controller, physics) {
+            builder: (context, controller, physics, _) {
               capturedController = controller;
               return ListView(
                 controller: controller,
@@ -49,7 +49,7 @@ void main() {
         MaterialApp(
           home: SilkyScroll(
             controller: externalController,
-            builder: (context, controller, physics) => ListView.builder(
+            builder: (context, controller, physics, _) => ListView.builder(
               controller: controller,
               physics: physics,
               itemCount: 50,
@@ -75,7 +75,7 @@ void main() {
         MaterialApp(
           home: SilkyScroll.fromConfig(
             config: config,
-            builder: (context, controller, physics) => ListView(
+            builder: (context, controller, physics, _) => ListView(
               controller: controller,
               physics: physics,
               children: const [Text('Config Test')],
@@ -91,7 +91,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: SilkyScroll(
-            builder: (context, controller, physics) => ListView(
+            builder: (context, controller, physics, _) => ListView(
               controller: controller,
               physics: physics,
               children: const [SizedBox(height: 100)],

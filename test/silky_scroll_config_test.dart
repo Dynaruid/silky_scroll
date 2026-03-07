@@ -12,7 +12,6 @@ void main() {
       expect(config.direction, Axis.vertical);
       expect(config.edgeLockingDelay, const Duration(milliseconds: 650));
       expect(config.enableStretchEffect, isTrue);
-      expect(config.enableScrollBubbling, isFalse);
       expect(config.debugMode, isFalse);
     });
 

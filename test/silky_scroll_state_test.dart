@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:silky_scroll/src/blocked_scroll_physics.dart';
 import 'package:silky_scroll/src/silky_scroll_state.dart';
 import 'package:silky_scroll/src/silky_scroll_mouse_pointer_manager.dart';
 
@@ -33,10 +34,10 @@ SilkyScrollState _createState({
   Duration silkyScrollDuration = const Duration(milliseconds: 700),
   Curve animationCurve = Curves.easeOutQuart,
   bool isVertical = true,
-  bool enableScrollBubbling = false,
   bool debugMode = false,
   SilkyScrollMousePointerManager? manager,
   TickerProvider? vsync,
+  int Function()? clock,
 }) {
   manager ??= SilkyScrollMousePointerManager();
   return SilkyScrollState(
@@ -47,11 +48,11 @@ SilkyScrollState _createState({
     silkyScrollDuration: silkyScrollDuration,
     animationCurve: animationCurve,
     isVertical: isVertical,
-    enableScrollBubbling: enableScrollBubbling,
     debugMode: debugMode,
     setManualPointerDeviceKind: null,
     silkyScrollMousePointerManager: manager,
     vsync: vsync ?? _TestVSync(),
+    clock: clock,
   );
 }
 
@@ -97,15 +98,19 @@ void main() {
     testWidgets(
       'handleTouchScroll at edge transitions to edgeLocked after delay',
       (tester) async {
+        int fakeTime = 1000;
         state = _createState(
           manager: manager,
           edgeLockingDelay: const Duration(milliseconds: 200),
+          clock: () => fakeTime,
         );
         await tester.pumpWidget(
           _buildScrollable(controller: state.clientController),
         );
 
         // At top edge, scrolling up (negative delta)
+        state.handleTouchScroll(-10.0);
+        fakeTime += 50;
         state.handleTouchScroll(-10.0);
         expect(state.physicsPhase, ScrollPhysicsPhase.edgeCheckPending);
 
@@ -122,15 +127,19 @@ void main() {
     );
 
     testWidgets('edgeLocked unlocks after edgeLockingDelay', (tester) async {
+      int fakeTime = 1000;
       state = _createState(
         manager: manager,
         edgeLockingDelay: const Duration(milliseconds: 200),
+        clock: () => fakeTime,
       );
       await tester.pumpWidget(
         _buildScrollable(controller: state.clientController),
       );
 
       // Trigger edge lock at top
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
       state.handleTouchScroll(-10.0);
       await tester.pump(const Duration(milliseconds: 100));
       expect(state.isEdgeLocked, isTrue);
@@ -144,15 +153,19 @@ void main() {
     testWidgets(
       'continued touch scroll during edgeLocked does not cancel unlock timer',
       (tester) async {
+        int fakeTime = 1000;
         state = _createState(
           manager: manager,
           edgeLockingDelay: const Duration(milliseconds: 300),
+          clock: () => fakeTime,
         );
         await tester.pumpWidget(
           _buildScrollable(controller: state.clientController),
         );
 
         // Trigger edge lock at top
+        state.handleTouchScroll(-10.0);
+        fakeTime += 50;
         state.handleTouchScroll(-10.0);
         await tester.pump(const Duration(milliseconds: 100));
         expect(state.isEdgeLocked, isTrue);
@@ -251,6 +264,261 @@ void main() {
         scrollPhysics: const BouncingScrollPhysics(),
       );
       expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+    });
+  });
+
+  group('SilkyScrollState — touch-aware edge locking', () {
+    late SilkyScrollState state;
+    late SilkyScrollMousePointerManager manager;
+
+    setUp(() {
+      manager = SilkyScrollMousePointerManager();
+      manager.keyStack.clear();
+      manager.reserveKey = null;
+    });
+
+    tearDown(() {
+      if (!state.isDisposed) {
+        state.dispose();
+      }
+    });
+
+    testWidgets('handleTouchScroll during active touch does not lock at edge', (
+      tester,
+    ) async {
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 200),
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Simulate finger down
+      state.onTouchDown();
+
+      // Scroll up at top edge — should NOT lock
+      state.handleTouchScroll(-10.0);
+      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+
+      await tester.pump(const Duration(milliseconds: 100));
+      // Should still be normal — no timer was started
+      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+
+      state.dispose();
+    });
+
+    testWidgets('onEdgeOverScroll fires during active touch at edge', (
+      tester,
+    ) async {
+      final List<double> edgeDeltas = [];
+      state = _createState(manager: manager);
+      // Need to recreate with callback — use a fresh state
+      state.dispose();
+      state = SilkyScrollState(
+        widgetScrollPhysics: const ScrollPhysics(),
+        edgeLockingDelay: const Duration(milliseconds: 200),
+        scrollSpeed: 1,
+        silkyScrollDuration: const Duration(milliseconds: 700),
+        animationCurve: Curves.easeOutQuart,
+        isVertical: true,
+        debugMode: false,
+        onEdgeOverScroll: edgeDeltas.add,
+        setManualPointerDeviceKind: null,
+        silkyScrollMousePointerManager: manager,
+        vsync: _TestVSync(),
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0); // top edge, scroll up
+      expect(edgeDeltas, [-10.0]);
+
+      state.dispose();
+    });
+
+    testWidgets('onTouchUp locks at edge with directional awareness', (
+      tester,
+    ) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Simulate touch scroll at top edge then lift
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+
+      state.onTouchUp();
+      // Should now be edge locked
+      expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
+      expect(state.isEdgeLocked, isTrue);
+
+      state.dispose();
+    });
+
+    testWidgets('onTouchUp does not lock when not at edge', (tester) async {
+      state = _createState(manager: manager);
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Move away from edge
+      state.clientController.jumpTo(500);
+      await tester.pump();
+
+      state.onTouchDown();
+      state.handleTouchScroll(10.0);
+      state.onTouchUp();
+
+      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+      expect(state.isEdgeLocked, isFalse);
+    });
+
+    testWidgets('touch-up edge lock uses BlockedScrollPhysics', (tester) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Lock at top edge via touch-up
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+      state.onTouchUp();
+      expect(state.isEdgeLocked, isTrue);
+      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+      // Fully blocked — unlock is handled by tryGestureUnlock
+      expect(state.currentScrollPhysics, isA<NeverScrollableScrollPhysics>());
+
+      state.dispose();
+    });
+
+    testWidgets('onTouchDown preserves edge lock for outward blocking', (
+      tester,
+    ) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Lock at top edge via touch-up
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+      state.onTouchUp();
+      expect(state.isEdgeLocked, isTrue);
+
+      // New touch preserves lock (BlockedScrollPhysics;
+      // unlock is handled by tryGestureUnlock)
+      state.onTouchDown();
+      expect(state.isEdgeLocked, isTrue);
+      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+
+      state.dispose();
+    });
+
+    testWidgets('edge lock expires after edgeLockingDelay', (tester) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 200),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+      state.onTouchUp();
+      expect(state.isEdgeLocked, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(state.isEdgeLocked, isFalse);
+      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+    });
+
+    testWidgets('onTouchDown keeps edge lock, touchUp renews it at edge', (
+      tester,
+    ) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Lock at top edge
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+      state.onTouchUp();
+      expect(state.isEdgeLocked, isTrue);
+
+      // New touch keeps the lock
+      state.onTouchDown();
+      expect(state.isEdgeLocked, isTrue);
+
+      // Touch up at the same edge renews the lock
+      state.onTouchUp();
+      expect(state.isEdgeLocked, isTrue);
+
+      state.dispose();
+    });
+
+    testWidgets('onTouchUp applies edge lock even when overscrollLocked', (
+      tester,
+    ) async {
+      int fakeTime = 1000;
+      state = _createState(manager: manager, clock: () => fakeTime);
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      state.onTouchDown();
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+
+      // Simulate overscroll lock (from widget's onPointerUp)
+      state.isOverScrolling = true;
+      state.beginOverscrollLock(const Duration(milliseconds: 200));
+      expect(state.isOverscrollLocked, isTrue);
+
+      // onTouchUp should apply edge lock, overriding overscrollLocked
+      state.onTouchUp();
+      expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
+
+      state.dispose();
     });
   });
 
@@ -356,48 +624,91 @@ void main() {
     });
   });
 
-  group('SilkyScrollState — bubbling', () {
-    testWidgets('manualHandleScroll bubbles to parent when physics blocked', (
+  group('SilkyScrollState — recoil physics blocking', () {
+    late SilkyScrollState state;
+    late SilkyScrollMousePointerManager manager;
+
+    setUp(() {
+      manager = SilkyScrollMousePointerManager();
+      manager.keyStack.clear();
+      manager.reserveKey = null;
+    });
+
+    tearDown(() {
+      if (!state.isDisposed) {
+        state.dispose();
+      }
+    });
+
+    testWidgets('onAnimationStateChanged blocks physics during recoil', (
       tester,
     ) async {
-      final parentState = _createState(enableScrollBubbling: true);
-      final childState = _createState(enableScrollBubbling: true);
-      childState.parentSilkyScrollState = parentState;
-
+      state = _createState(
+        manager: manager,
+        physics: const BouncingScrollPhysics(),
+      );
       await tester.pumpWidget(
-        MaterialApp(
-          home: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: parentState.clientController,
-                  itemCount: 50,
-                  itemBuilder: (_, i) =>
-                      SizedBox(height: 100, child: Text('P$i')),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  controller: childState.clientController,
-                  itemCount: 50,
-                  itemBuilder: (_, i) =>
-                      SizedBox(height: 100, child: Text('C$i')),
-                ),
-              ),
-            ],
-          ),
-        ),
+        _buildScrollable(controller: state.clientController),
       );
 
-      // Manual handle scroll on child with different axis should bubble
-      childState.currentScrollPhysics = const NeverScrollableScrollPhysics();
-      childState.manualHandleScroll(50.0, true);
-      // Parent should receive the bubbled scroll
-      // (not easily checkable without mocking, but at least no errors)
+      // Simulate recoil start
+      state.isRecoilScroll = true;
+      state.onAnimationStateChanged();
 
-      childState.dispose();
-      parentState.dispose();
+      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
     });
+
+    testWidgets('onAnimationStateChanged restores physics when recoil ends', (
+      tester,
+    ) async {
+      state = _createState(
+        manager: manager,
+        physics: const BouncingScrollPhysics(),
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Start and end recoil
+      state.isRecoilScroll = true;
+      state.onAnimationStateChanged();
+      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+
+      state.isRecoilScroll = false;
+      state.onAnimationStateChanged();
+      expect(state.currentScrollPhysics, isA<BouncingScrollPhysics>());
+    });
+
+    testWidgets(
+      'onAnimationStateChanged preserves edge lock after recoil ends',
+      (tester) async {
+        int fakeTime = 1000;
+        state = _createState(
+          manager: manager,
+          edgeLockingDelay: const Duration(milliseconds: 500),
+          clock: () => fakeTime,
+        );
+        await tester.pumpWidget(
+          _buildScrollable(controller: state.clientController),
+        );
+
+        // Trigger edge lock at top
+        state.onTouchDown();
+        state.handleTouchScroll(-10.0);
+        fakeTime += 50;
+        state.handleTouchScroll(-10.0);
+        state.onTouchUp();
+        expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
+        expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+
+        // Simulate recoil end while edge is locked — should NOT restore
+        state.isRecoilScroll = false;
+        state.onAnimationStateChanged();
+        expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+
+        state.dispose();
+      },
+    );
   });
 
   group('SilkyScrollState — cancelSilkyScroll', () {

@@ -1,12 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:silky_scroll/silky_scroll.dart';
 
 /// Nested (inner + outer) scrolling demo.
 ///
 /// The outer [SilkyScroll] list contains cards, some with inner
-/// [SilkyScroll] lists. A **Bubbling** toggle lets users see the
-/// difference: when on, inner lists that reach their edge pass
-/// scroll momentum to the outer list.
+/// [SilkyScroll] lists.
 class NestedScrollPage extends StatefulWidget {
   const NestedScrollPage({super.key});
 
@@ -15,9 +14,9 @@ class NestedScrollPage extends StatefulWidget {
 }
 
 class _NestedScrollPageState extends State<NestedScrollPage> {
-  bool _bubbling = false;
   bool _stretch = true;
   double _outerEdgeDelta = 0;
+  PointerDeviceKind? _deviceKind;
 
   @override
   Widget build(BuildContext context) {
@@ -27,25 +26,29 @@ class _NestedScrollPageState extends State<NestedScrollPage> {
       appBar: AppBar(
         title: const Text('Nested Scroll'),
         actions: [
+          if (_deviceKind != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Chip(
+                avatar: Icon(
+                  _deviceKind == PointerDeviceKind.mouse
+                      ? Icons.mouse
+                      : _deviceKind == PointerDeviceKind.touch
+                      ? Icons.touch_app
+                      : Icons.gesture,
+                  size: 16,
+                ),
+                label: Text(_deviceKind!.name),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 12),
             child: FilterChip(
               avatar: Icon(_stretch ? Icons.expand : Icons.compress, size: 18),
               label: const Text('Stretch'),
               selected: _stretch,
               onSelected: (v) => setState(() => _stretch = v),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilterChip(
-              avatar: Icon(
-                _bubbling ? Icons.bubble_chart : Icons.bubble_chart_outlined,
-                size: 18,
-              ),
-              label: const Text('Bubbling'),
-              selected: _bubbling,
-              onSelected: (v) => setState(() => _bubbling = v),
             ),
           ),
         ],
@@ -55,31 +58,10 @@ class _NestedScrollPageState extends State<NestedScrollPage> {
           // ── Info banner ────────────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            color: _bubbling ? cs.primaryContainer : cs.surfaceContainerLow,
+            color: cs.surfaceContainerLow,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                Icon(
-                  _bubbling ? Icons.swap_vert : Icons.block,
-                  size: 18,
-                  color: _bubbling
-                      ? cs.onPrimaryContainer
-                      : cs.onSurfaceVariant,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _bubbling
-                        ? 'Bubbling ON — inner list at edge passes momentum to outer list'
-                        : 'Bubbling OFF — inner list stops at edge, outer list stays still',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: _bubbling
-                          ? cs.onPrimaryContainer
-                          : cs.onSurfaceVariant,
-                    ),
-                  ),
-                ),
                 if (_outerEdgeDelta != 0)
                   Chip(
                     avatar: Icon(Icons.bolt, size: 16, color: cs.error),
@@ -99,17 +81,21 @@ class _NestedScrollPageState extends State<NestedScrollPage> {
           // ── Outer scrollable ──────────────────────────────────────────
           Expanded(
             child: SilkyScroll(
-              key: ValueKey('outer_${_bubbling}_$_stretch'),
+              key: ValueKey('outer_$_stretch'),
               physics: const BouncingScrollPhysics(),
               enableStretchEffect: _stretch,
-              enableScrollBubbling: _bubbling,
               onEdgeOverScroll: (delta) {
                 setState(() => _outerEdgeDelta = delta);
                 Future.delayed(const Duration(milliseconds: 600), () {
                   if (mounted) setState(() => _outerEdgeDelta = 0);
                 });
               },
-              builder: (context, controller, physics) {
+              builder: (context, controller, physics, deviceKind) {
+                if (deviceKind != _deviceKind) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _deviceKind = deviceKind);
+                  });
+                }
                 return ListView.builder(
                   controller: controller,
                   physics: physics,
@@ -120,8 +106,8 @@ class _NestedScrollPageState extends State<NestedScrollPage> {
                     if (index % 3 == 1) {
                       return _NestedCard(
                         index: index,
-                        bubbling: _bubbling,
                         stretch: _stretch,
+                        debugMode: index == 4,
                       );
                     }
                     return _SimpleCard(index: index);
@@ -165,13 +151,13 @@ class _SimpleCard extends StatelessWidget {
 class _NestedCard extends StatefulWidget {
   const _NestedCard({
     required this.index,
-    required this.bubbling,
     required this.stretch,
+    this.debugMode = false,
   });
 
   final int index;
-  final bool bubbling;
   final bool stretch;
+  final bool debugMode;
 
   @override
   State<_NestedCard> createState() => _NestedCardState();
@@ -219,7 +205,7 @@ class _NestedCardState extends State<_NestedCard> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      widget.bubbling ? 'bubbling ↑' : 'edge hit',
+                      'edge hit',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -235,24 +221,22 @@ class _NestedCardState extends State<_NestedCard> {
           SizedBox(
             height: 220,
             child: SilkyScroll(
-              key: ValueKey(
-                'inner_${widget.index}_${widget.bubbling}_${widget.stretch}',
-              ),
-              physics: const BouncingScrollPhysics(),
-              enableScrollBubbling: widget.bubbling,
+              key: ValueKey('inner_${widget.index}_${widget.stretch}'),
+              physics: const ClampingScrollPhysics(),
               enableStretchEffect: widget.stretch,
+              debugMode: widget.debugMode,
               onEdgeOverScroll: (delta) {
                 setState(() => _innerEdgeDelta = delta);
                 Future.delayed(const Duration(milliseconds: 600), () {
                   if (mounted) setState(() => _innerEdgeDelta = 0);
                 });
               },
-              builder: (context, controller, physics) {
+              builder: (context, controller, physics, _) {
                 return ListView.separated(
                   controller: controller,
                   physics: physics,
                   padding: const EdgeInsets.all(8),
-                  itemCount: 25,
+                  itemCount: 15,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, inner) {
                     final color = inner.isEven

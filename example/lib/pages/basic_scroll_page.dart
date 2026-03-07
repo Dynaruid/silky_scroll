@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:silky_scroll/silky_scroll.dart';
 
@@ -20,6 +21,7 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
   double _offset = 0;
   double _lastDelta = 0;
   double _edgeOverscrollDelta = 0;
+  PointerDeviceKind? _deviceKind;
 
   /// Rolling log of recent scroll events (newest first).
   final _log = ListQueue<_ScrollEvent>(30);
@@ -92,6 +94,17 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
                         ? cs.error
                         : cs.onSurfaceVariant,
                   ),
+                  const SizedBox(width: 16),
+                  _Indicator(
+                    icon: _deviceKind == PointerDeviceKind.mouse
+                        ? Icons.mouse
+                        : _deviceKind == PointerDeviceKind.touch
+                        ? Icons.touch_app
+                        : Icons.gesture,
+                    label: 'device',
+                    value: _deviceKind?.name ?? '—',
+                    color: cs.tertiary,
+                  ),
                 ],
               ),
             ),
@@ -106,7 +119,13 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
               enableStretchEffect: true,
               onScroll: _onScroll,
               onEdgeOverScroll: _onEdgeOverScroll,
-              builder: (context, controller, physics) {
+              edgeLockingDelay: Duration(milliseconds: 3000),
+              builder: (context, controller, physics, deviceKind) {
+                if (deviceKind != _deviceKind) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _deviceKind = deviceKind);
+                  });
+                }
                 return ListView.builder(
                   controller: controller,
                   physics: physics,

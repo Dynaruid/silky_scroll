@@ -15,6 +15,31 @@ void main() {
       controller.dispose();
     });
 
+    testWidgets('returns 0 when velocity is zero or below threshold', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ListView.builder(
+            controller: controller,
+            itemCount: 50,
+            itemBuilder: (_, i) => SizedBox(height: 100, child: Text('$i')),
+          ),
+        ),
+      );
+
+      // At top edge but velocity is zero → stationary, no edge concern
+      expect(edgeDetector.checkOffsetAtEdge(0, controller), 0);
+      expect(edgeDetector.checkOffsetAtEdge(0.3, controller), 0);
+      expect(edgeDetector.checkOffsetAtEdge(-0.3, controller), 0);
+
+      // Jump to bottom edge
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pump();
+      expect(edgeDetector.checkOffsetAtEdge(0, controller), 0);
+      expect(edgeDetector.checkOffsetAtEdge(0.3, controller), 0);
+    });
+
     testWidgets('returns 0 when controller has no clients', (tester) async {
       // Controller without attached scrollable — hasClients is false.
       expect(edgeDetector.checkOffsetAtEdge(1, controller), 0);

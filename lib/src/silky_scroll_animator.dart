@@ -3,43 +3,50 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
 const double _kScrollDeltaFactor = 0.5;
-const double _kMaxBounceOvershoot = 150;
-const double _kEdgeThreshold = 0.5;
 
 /// Snap threshold: when the remaining distance is below this value
 /// (in logical pixels), the scroll jumps to the target and stops.
-const double _kSnapThreshold = 0.5;
+const double _kSnapThreshold = 0.9;
 
-/// -ln(0.01) ≈ 4.605 — used to derive an exponential-decay rate
-/// from [silkyScrollDuration] so that ~99 % of the distance is
-/// covered within that duration.
-const double _kDecayLogFactor = 4.605;
+/// Default value for [SilkyScrollAnimator.decayLogFactor].
+///
+/// Used to derive an exponential-decay rate from [silkyScrollDuration].
+/// Higher values make the scroll converge faster toward [futurePosition].
+const double kDefaultDecayLogFactor = 12;
 
+/// Default value for [SilkyScrollAnimator.recoilDurationSec].
+///
 /// Duration of the recoil (bounce-back) animation in seconds.
-const double _kRecoilDurationSec = 0.4;
+const double kDefaultRecoilDurationSec = 0.2;
 
 /// Callback interface used by [SilkyScrollAnimator] to communicate
 /// state changes back to the owning [SilkyScrollState].
 abstract interface class SilkyScrollAnimatorDelegate {
   ScrollController get clientController;
+
   Curve get animationCurve;
+
   Duration get silkyScrollDuration;
+
   bool get isPlatformBouncingScrollPhysics;
 
   double get futurePosition;
+
   set futurePosition(double value);
 
   bool get prevDeltaPositive;
+
   set prevDeltaPositive(bool value);
 
   bool get isOnSilkyScrolling;
+
   set isOnSilkyScrolling(bool value);
 
   bool get isRecoilScroll;
+
   set isRecoilScroll(bool value);
 
   bool get isDisposed;
-  bool get enableScrollBubbling;
 
   void onAnimationStateChanged();
 
@@ -63,14 +70,27 @@ abstract interface class SilkyScrollAnimatorDelegate {
 /// the silky-smooth feel of browser smooth-scroll implementations
 /// (Chrome, Firefox).
 final class SilkyScrollAnimator {
-  SilkyScrollAnimator(this._delegate, TickerProvider vsync)
-    : _smoothingFactor =
-          _kDecayLogFactor /
-          (_delegate.silkyScrollDuration.inMilliseconds / 1000.0) {
+  SilkyScrollAnimator(
+    this._delegate,
+    TickerProvider vsync, {
+    required this.maxBounceOvershoot,
+    this.decayLogFactor = kDefaultDecayLogFactor,
+    this.recoilDurationSec = kDefaultRecoilDurationSec,
+  }) : _smoothingFactor =
+           decayLogFactor /
+           (_delegate.silkyScrollDuration.inMilliseconds / 1000.0) {
     _ticker = vsync.createTicker(_onTick);
   }
 
   final SilkyScrollAnimatorDelegate _delegate;
+  final double maxBounceOvershoot;
+
+  /// Used to derive an exponential-decay rate from [silkyScrollDuration].
+  /// Higher values make the scroll converge faster toward [futurePosition].
+  final double decayLogFactor;
+
+  /// Duration of the recoil (bounce-back) animation in seconds.
+  final double recoilDurationSec;
 
   /// Exponential decay rate derived from [silkyScrollDuration].
   /// Higher values → faster convergence to [futurePosition].
@@ -103,34 +123,14 @@ final class SilkyScrollAnimator {
           (scrollDelta * scrollSpeed * _kScrollDeltaFactor);
     }
 
-    // ── Clamp / allow bounce at edges ───────────────────────────
-    if (_delegate.futurePosition > controller.position.maxScrollExtent) {
-      final bool alreadyAtEnd =
-          (controller.offset - controller.position.maxScrollExtent).abs() <
-          _kEdgeThreshold;
-      final bool allowBounce =
-          _delegate.isPlatformBouncingScrollPhysics &&
-          !(_delegate.enableScrollBubbling && alreadyAtEnd);
-      _delegate.futurePosition = allowBounce
-          ? min(
-              controller.position.maxScrollExtent + _kMaxBounceOvershoot,
-              _delegate.futurePosition,
-            )
-          : controller.position.maxScrollExtent;
-    } else if (_delegate.futurePosition < controller.position.minScrollExtent) {
-      final bool alreadyAtStart =
-          controller.offset - controller.position.minScrollExtent <
-          _kEdgeThreshold;
-      final bool allowBounce =
-          _delegate.isPlatformBouncingScrollPhysics &&
-          !(_delegate.enableScrollBubbling && alreadyAtStart);
-      _delegate.futurePosition = allowBounce
-          ? max(
-              controller.position.minScrollExtent - _kMaxBounceOvershoot,
-              _delegate.futurePosition,
-            )
-          : controller.position.minScrollExtent;
-    }
+    // ── Clamp to edges ± maxBounceOvershoot ─────────────────────
+    final double overshoot = _delegate.isPlatformBouncingScrollPhysics
+        ? maxBounceOvershoot
+        : 0;
+    _delegate.futurePosition = _delegate.futurePosition.clamp(
+      controller.position.minScrollExtent - overshoot,
+      controller.position.maxScrollExtent + overshoot,
+    );
 
     // Clear any recoil in progress — new scroll input takes priority.
     _recoilTarget = null;
@@ -211,7 +211,7 @@ final class SilkyScrollAnimator {
 
   void _tickRecoil(ScrollController controller, double dt) {
     _recoilElapsedSec += dt;
-    final double t = (_recoilElapsedSec / _kRecoilDurationSec).clamp(0.0, 1.0);
+    final double t = (_recoilElapsedSec / recoilDurationSec).clamp(0.0, 1.0);
     final double curved = Curves.easeInOutSine.transform(t);
     final double newPos =
         _recoilStartOffset + (_recoilTarget! - _recoilStartOffset) * curved;
@@ -229,6 +229,8 @@ final class SilkyScrollAnimator {
   }
 
   void _checkRecoil(ScrollController controller) {
+    if (!_delegate.isPlatformBouncingScrollPhysics) return;
+
     final double? edgePosition = switch (controller.offset) {
       final o when o > controller.position.maxScrollExtent =>
         controller.position.maxScrollExtent,

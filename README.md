@@ -18,7 +18,6 @@
 - **Smart Input Detection** — Automatically detects mouse, trackpad, and touch to apply appropriate physics
 - **Edge Locking** — Prevents unintended scroll propagation to parent views at scroll boundaries
 - **Stretch Effect** — Supports Android stretch and iOS bounce overscroll effects
-- **Nested Scroll** — Controls momentum bubbling in nested scroll views
 - **Horizontal Scroll** — Supports both horizontal and vertical directions
 - **All Platforms** — Android, iOS, Web, Windows, macOS, Linux
 
@@ -38,7 +37,7 @@ Simply wrap your scrollable widget with `SilkyScroll`.
 
 ```dart
 SilkyScroll(
-  builder: (context, controller, physics) => ListView(
+  builder: (context, controller, physics, pointerDeviceKind) => ListView(
     controller: controller,
     physics: physics,
     children: [...],
@@ -78,7 +77,7 @@ class _ScrollExampleState extends State<ScrollExample> {
         scrollSpeed: 1.5,
         animationCurve: Curves.easeOutQuart,
         direction: Axis.vertical,
-        builder: (context, controller, physics) {
+        builder: (context, controller, physics, pointerDeviceKind) {
           return ListView.builder(
             controller: controller,
             physics: physics,
@@ -108,7 +107,7 @@ const config = SilkyScrollConfig(
 
 SilkyScroll.fromConfig(
   config: config,
-  builder: (context, controller, physics) => ListView(...),
+  builder: (context, controller, physics, pointerDeviceKind) => ListView(...),
 )
 ```
 
@@ -116,21 +115,23 @@ SilkyScroll.fromConfig(
 
 ## Parameters
 
-| Parameter                   | Type                | Default               | Description                        |
-| --------------------------- | ------------------- | --------------------- | ---------------------------------- |
-| `controller`                | `ScrollController?` | `null`                | External scroll controller         |
-| `silkyScrollDuration`       | `Duration`          | `700ms`               | Scroll animation duration          |
-| `scrollSpeed`               | `double`            | `1`                   | Scroll speed multiplier            |
-| `animationCurve`            | `Curve`             | `Curves.easeOutQuart` | Animation curve                    |
-| `direction`                 | `Axis`              | `vertical`            | Scroll direction                   |
-| `physics`                   | `ScrollPhysics`     | `ScrollPhysics()`     | Scroll physics                     |
-| `edgeLockingDelay`          | `Duration`          | `650ms`               | Lock delay after reaching edge     |
-| `overScrollingLockingDelay` | `Duration`          | `700ms`               | Overscroll lock delay              |
-| `enableStretchEffect`       | `bool`              | `true`                | Overscroll stretch effect          |
-| `enableScrollBubbling`      | `bool`              | `false`               | Nested scroll momentum propagation |
-| `onScroll`                  | `Function(double)?` | `null`                | Scroll event callback              |
-| `onEdgeOverScroll`          | `Function(double)?` | `null`                | Edge overscroll callback           |
-| `debugMode`                 | `bool`              | `false`               | Debug logging                      |
+| Parameter                    | Type                | Default               | Description                     |
+| ---------------------------- | ------------------- | --------------------- | ------------------------------- |
+| `controller`                 | `ScrollController?` | `null`                | External scroll controller      |
+| `silkyScrollDuration`        | `Duration`          | `700ms`               | Scroll animation duration       |
+| `scrollSpeed`                | `double`            | `1`                   | Scroll speed multiplier         |
+| `animationCurve`             | `Curve`             | `Curves.easeOutQuart` | Animation curve                 |
+| `direction`                  | `Axis`              | `vertical`            | Scroll direction                |
+| `physics`                    | `ScrollPhysics`     | `ScrollPhysics()`     | Scroll physics                  |
+| `edgeLockingDelay`           | `Duration`          | `650ms`               | Lock delay after reaching edge  |
+| `overScrollingLockingDelay`  | `Duration`          | `700ms`               | Overscroll lock delay           |
+| `enableStretchEffect`        | `bool`              | `true`                | Overscroll stretch effect       |
+| `decayLogFactor`             | `double`            | `12`                  | Smooth-scroll convergence speed |
+| `recoilDurationSec`          | `double`            | `0.2`                 | Recoil animation duration (s)   |
+| `setManualPointerDeviceKind` | `Function?`         | `null`                | Manual pointer device override  |
+| `onScroll`                   | `Function(double)?` | `null`                | Scroll event callback           |
+| `onEdgeOverScroll`           | `Function(double)?` | `null`                | Edge overscroll callback        |
+| `debugMode`                  | `bool`              | `false`               | Debug logging                   |
 
 ---
 

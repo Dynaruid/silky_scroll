@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'silky_scroll_mouse_pointer_manager.dart';
@@ -8,13 +7,14 @@ import 'blocked_scroll_physics.dart';
 import 'silky_edge_detector.dart';
 import 'silky_scroll_animator.dart';
 import 'silky_input_handler.dart';
+import 'scroll_delta_sample.dart';
+import 'scroll_delta_sample_analyzer.dart';
 
 /// Magic number constants for scroll behavior tuning.
-const double _kBubblingDeltaMultiplier = 2;
-const int _kScrollDisableCheckDelayMs = 80;
-const int _kMinManualScrollDurationMs = 250;
-const int _kMaxManualScrollDurationMs = 800;
-const double _kMaxBounceOvershoot = 150;
+const int _kScrollDisableCheckDelayMs = 100;
+const double _kMaxBounceOvershoot = 120;
+const double _kInwardVelocityThresholdPxS = 5.0;
+const int _kDeltaSampleRetentionMs = 1000;
 
 /// Describes the current physics-management phase.
 ///
@@ -48,14 +48,16 @@ class SilkyScrollState extends ChangeNotifier
     required this.silkyScrollDuration,
     required this.animationCurve,
     required this.isVertical,
-    required this.enableScrollBubbling,
     required this.debugMode,
+    this.decayLogFactor = kDefaultDecayLogFactor,
+    this.recoilDurationSec = kDefaultRecoilDurationSec,
     this.onScroll,
     this.onEdgeOverScroll,
     required Function(PointerDeviceKind)? setManualPointerDeviceKind,
     required this.silkyScrollMousePointerManager,
     required TickerProvider vsync,
-  }) {
+    int Function()? clock,
+  }) : _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
     currentScrollPhysics = widgetScrollPhysics;
     isPlatformBouncingScrollPhysics =
         widgetScrollPhysics is BouncingScrollPhysics;
@@ -79,11 +81,18 @@ class SilkyScrollState extends ChangeNotifier
       setPointerDeviceKind = setManualPointerDeviceKind;
     }
 
-    _animator = SilkyScrollAnimator(this, vsync);
+    _animator = SilkyScrollAnimator(
+      this,
+      vsync,
+      maxBounceOvershoot: _kMaxBounceOvershoot,
+      decayLogFactor: decayLogFactor,
+      recoilDurationSec: recoilDurationSec,
+    );
     _inputHandler = SilkyInputHandler(this);
   }
 
   bool _disposed = false;
+  final int Function() _clock;
   @override
   late final ScrollController clientController;
   late final SilkyScrollController silkyScrollController;
@@ -97,12 +106,13 @@ class SilkyScrollState extends ChangeNotifier
   @override
   late final bool isPlatformBouncingScrollPhysics;
 
+  final double decayLogFactor;
+  final double recoilDurationSec;
+
   late ScrollPhysics currentScrollPhysics;
   late ScrollPhysics widgetScrollPhysics;
   final BlockedScrollPhysics _blockedPhysics = const BlockedScrollPhysics();
 
-  @override
-  final bool enableScrollBubbling;
   @override
   final void Function(double delta)? onScroll;
   final void Function(double delta)? onEdgeOverScroll;
@@ -124,7 +134,6 @@ class SilkyScrollState extends ChangeNotifier
   @override
   double futurePosition = 0;
 
-  double lastDelta = 0;
   Timer? _phaseTimer;
   ScrollPhysicsPhase _physicsPhase = ScrollPhysicsPhase.normal;
 
@@ -143,9 +152,30 @@ class SilkyScrollState extends ChangeNotifier
 
   @override
   final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
-  SilkyScrollState? parentSilkyScrollState;
-  bool _lastScrollDirectionNegative = true;
   bool isOverScrolling = false;
+  bool _isTouchActive = false;
+  int _lockedEdgeDirection = 0;
+
+  // ── Scroll delta samples ──────────────────────────────────────────
+  final List<ScrollDeltaSample> _recentDeltaSamples = [];
+
+  /// Current scroll speed in logical-pixels / second.
+  ///
+  /// Computed from recent delta samples using time-window grouping
+  double get currentScrollSpeed =>
+      ScrollDeltaSampleAnalyzer.calculateAverageSpeed(_recentDeltaSamples);
+
+  /// Unmodifiable snapshot of the recent delta samples.
+  List<ScrollDeltaSample> get recentDeltaSamples =>
+      List.unmodifiable(_recentDeltaSamples);
+
+  void _recordDelta(double delta) {
+    final int now = _clock();
+    _recentDeltaSamples.add(ScrollDeltaSample(delta, now));
+    // Trim old samples.
+    final int cutoff = now - _kDeltaSampleRetentionMs;
+    _recentDeltaSamples.removeWhere((s) => s.timeMs < cutoff);
+  }
 
   // ── Composed helpers ──────────────────────────────────────────────
   late final SilkyScrollAnimator _animator;
@@ -155,8 +185,22 @@ class SilkyScrollState extends ChangeNotifier
   // ── SilkyScrollAnimatorDelegate ──────────────────────────────────
   @override
   void onAnimationStateChanged() {
-    // Recoil state changes do not affect the widget tree;
-    // only physics changes need notifyListeners.
+    if (isRecoilScroll) {
+      // Block physics during recoil so BouncingScrollPhysics does not
+      // trigger overscroll visual effects while jumpTo() overshoots.
+      if (currentScrollPhysics is! BlockedScrollPhysics) {
+        currentScrollPhysics = _blockedPhysics;
+        notifyListeners();
+      }
+    } else {
+      // Recoil finished — restore normal physics only after the
+      // position has fully returned to within scroll bounds.
+      if (currentScrollPhysics is BlockedScrollPhysics &&
+          _physicsPhase != ScrollPhysicsPhase.edgeLocked) {
+        currentScrollPhysics = widgetScrollPhysics;
+        notifyListeners();
+      }
+    }
   }
 
   @override
@@ -197,6 +241,36 @@ class SilkyScrollState extends ChangeNotifier
     }
   }
 
+  /// Called when a touch pointer goes down.
+  ///
+  /// Keeps an active edge lock so that repeated outward drags at the
+  /// same edge remain blocked.  Inward unlock is handled separately
+  /// by [tryGestureUnlock] from the [Listener].
+  void onTouchDown() {
+    _isTouchActive = true;
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] onTouchDown | phase=$_physicsPhase '
+        'lockedEdge=$_lockedEdgeDirection',
+      );
+    }
+  }
+
+  /// Called when a touch pointer goes up.
+  ///
+  /// If the scroll is at an edge, activates a direction-aware edge lock
+  /// for [edgeLockingDelay].
+  void onTouchUp() {
+    _isTouchActive = false;
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] onTouchUp | phase=$_physicsPhase '
+        'lockedEdge=$_lockedEdgeDirection',
+      );
+    }
+    _checkEdgeLockOnTouchUp();
+  }
+
   // ── State machine transitions ─────────────────────────────────────
 
   void _transitionTo(
@@ -219,27 +293,24 @@ class SilkyScrollState extends ChangeNotifier
   // ── Edge locking ─────────────────────────────────────────────────
 
   void _checkNeedLocking() {
-    if (_disposed || !clientController.hasClients || lastDelta.abs() < 0.5) {
+    final double speed = currentScrollSpeed;
+    if (_disposed || !clientController.hasClients || speed.abs() < 0.5) {
       _transitionTo(ScrollPhysicsPhase.normal);
       return;
     }
 
-    final double delta = lastDelta.isNegative ? -1 : 1;
-
     if (clientController.position.maxScrollExtent < 0.5) {
-      lastDelta = 0;
       _transitionTo(ScrollPhysicsPhase.normal);
       return;
     }
 
     final int edgeResult = _edgeDetector.checkOffsetAtEdge(
-      delta,
+      speed,
       clientController,
     );
     if (edgeResult != 0 &&
         currentScrollPhysics is! BlockedScrollPhysics &&
         !isOverScrolling) {
-      onEdgeOverScroll?.call(lastDelta);
       currentScrollPhysics = _blockedPhysics;
       notifyListeners();
 
@@ -249,23 +320,84 @@ class SilkyScrollState extends ChangeNotifier
         _unlockScroll,
       );
 
-      if (parentSilkyScrollState != null && enableScrollBubbling) {
-        parentSilkyScrollState!.manualHandleScroll(
-          lastDelta * _kBubblingDeltaMultiplier,
-          isVertical,
-        );
-      }
-
-      lastDelta = 0;
       return;
     }
 
-    lastDelta = 0;
     _transitionTo(ScrollPhysicsPhase.normal);
+  }
+
+  void _checkEdgeLockOnTouchUp() {
+    if (_disposed || !clientController.hasClients) return;
+    if (clientController.position.maxScrollExtent < 0.5) return;
+    if (_physicsPhase != ScrollPhysicsPhase.normal &&
+        _physicsPhase != ScrollPhysicsPhase.edgeCheckPending &&
+        _physicsPhase != ScrollPhysicsPhase.overscrollLocked) {
+      return;
+    }
+
+    final int edgeResult = _edgeDetector.checkOffsetAtEdge(
+      currentScrollSpeed,
+      clientController,
+    );
+    if (edgeResult == 0) return;
+
+    _lockedEdgeDirection = edgeResult;
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] _checkEdgeLockOnTouchUp → LOCKED '
+        'edge=$_lockedEdgeDirection (${edgeResult == -1 ? "top" : "bottom"})'
+        ' currentScrollSpeed=$currentScrollSpeed',
+      );
+    }
+
+    currentScrollPhysics = _blockedPhysics;
+    notifyListeners();
+
+    _transitionTo(
+      ScrollPhysicsPhase.edgeLocked,
+      edgeLockingDelay,
+      _unlockScroll,
+    );
+  }
+
+  /// Checks whether the pointer gesture has moved enough in the
+  /// inward direction (away from the locked edge) to release the lock.
+  ///
+  /// Called from [Listener.onPointerMove] while the touch is active
+  /// and the scroll is edge-locked.  Returns `true` if the lock was
+  /// released.
+  bool _tryGestureUnlock() {
+    if (_physicsPhase != ScrollPhysicsPhase.edgeLocked ||
+        _lockedEdgeDirection == 0) {
+      return false;
+    }
+
+    // Velocity sign indicates direction in screen coordinates:
+    //   top edge  (-1): inward velocity is negative → product < 0
+    //   bottom edge (1): inward velocity is positive → product < 0
+    final bool isInward =
+        currentScrollSpeed.abs() >= _kInwardVelocityThresholdPxS &&
+        _lockedEdgeDirection * currentScrollSpeed.toInt() < 0;
+
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] tryGestureUnlock | '
+        'edge=$_lockedEdgeDirection velocity=${currentScrollSpeed.toStringAsFixed(1)} '
+        'inward=$isInward',
+      );
+    }
+
+    if (isInward) {
+      if (debugMode) debugPrint('[SilkyScroll] ★ UNLOCKED by gesture');
+      _unlockScroll();
+      return true;
+    }
+    return false;
   }
 
   void _unlockScroll() {
     if (!_disposed) {
+      _lockedEdgeDirection = 0;
       currentScrollPhysics = widgetScrollPhysics;
       _transitionTo(ScrollPhysicsPhase.normal);
       notifyListeners();
@@ -276,7 +408,24 @@ class SilkyScrollState extends ChangeNotifier
 
   @override
   void handleTouchScroll(double delta) {
-    lastDelta += delta;
+    _recordDelta(delta);
+
+    final int edgeResult = _edgeDetector.checkOffsetAtEdge(
+      delta,
+      clientController,
+    );
+    if (edgeResult != 0) {
+      onEdgeOverScroll?.call(delta);
+    }
+
+    _tryGestureUnlock();
+    // ── Touch-active: no locking, just edge notification ──
+    if (_isTouchActive) {
+      //Touch에서는 onTouchUp에서 edge lock이 걸림
+      return;
+    }
+
+    // ── Original trackpad edge-locking behavior ──
     // Don't start a new edge-check timer when an edge-lock or
     // overscroll-lock timer is already running — doing so would cancel
     // the pending _unlockScroll callback and leave currentScrollPhysics
@@ -295,6 +444,8 @@ class SilkyScrollState extends ChangeNotifier
 
   @override
   void handleMouseScroll(double delta, double scrollSpeed) {
+    _recordDelta(delta);
+
     if (isRecoilScroll) return;
 
     if (currentScrollPhysics != widgetScrollPhysics) {
@@ -333,46 +484,6 @@ class SilkyScrollState extends ChangeNotifier
     _animator.animateToScroll(scrollDelta, scrollSpeed);
   }
 
-  // ── Manual handle scroll (bubbling from child) ───────────────────
-
-  void manualHandleScroll(double delta, bool callIsVertical) {
-    if (_disposed) return;
-
-    if (currentScrollPhysics is! NeverScrollableScrollPhysics &&
-        callIsVertical == isVertical) {
-      if (delta.isNegative == _lastScrollDirectionNegative) {
-        futurePosition = min(
-          max(0, futurePosition + delta),
-          clientController.position.maxScrollExtent,
-        );
-      } else {
-        _lastScrollDirectionNegative = delta.isNegative;
-        futurePosition = min(
-          max(0, clientController.offset + delta),
-          clientController.position.maxScrollExtent,
-        );
-      }
-
-      final Duration duration = Duration(
-        milliseconds: min(
-          _kMaxManualScrollDurationMs,
-          max(
-            _kMinManualScrollDurationMs,
-            ((delta.abs() / _kMaxBounceOvershoot) * _kMinManualScrollDurationMs)
-                .toInt(),
-          ),
-        ),
-      );
-      clientController.animateTo(
-        futurePosition,
-        duration: duration,
-        curve: Curves.easeOutQuad,
-      );
-    } else {
-      parentSilkyScrollState?.manualHandleScroll(delta, callIsVertical);
-    }
-  }
-
   // ── Physics management ───────────────────────────────────────────
 
   void setWidgetScrollPhysics({required ScrollPhysics scrollPhysics}) {
@@ -408,9 +519,10 @@ class SilkyScrollState extends ChangeNotifier
     // 1. Mark as disposed first to guard all timer/listener callbacks.
     _disposed = true;
 
-    // 2. Cancel all pending timers.
+    // 2. Cancel all pending timers and clear samples.
     _phaseTimer?.cancel();
     _phaseTimer = null;
+    _recentDeltaSamples.clear();
 
     // 3. Remove our listener *before* disposing controllers, so that
     //    any position detach during dispose does not trigger our callback.

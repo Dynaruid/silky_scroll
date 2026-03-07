@@ -11,7 +11,10 @@ class _TestVSync implements TickerProvider {
 
 /// Minimal delegate for testing [SilkyScrollAnimator] in isolation.
 class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
-  _FakeAnimatorDelegate({required this.clientController});
+  _FakeAnimatorDelegate({
+    required this.clientController,
+    bool bouncingPhysics = false,
+  }) : isPlatformBouncingScrollPhysics = bouncingPhysics;
 
   @override
   final ScrollController clientController;
@@ -23,7 +26,7 @@ class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
   final Duration silkyScrollDuration = const Duration(milliseconds: 700);
 
   @override
-  final bool isPlatformBouncingScrollPhysics = false;
+  final bool isPlatformBouncingScrollPhysics;
 
   @override
   double futurePosition = 0;
@@ -39,9 +42,6 @@ class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
 
   @override
   bool isDisposed = false;
-
-  @override
-  bool enableScrollBubbling = false;
 
   int animationStateChangedCount = 0;
 
@@ -86,7 +86,11 @@ void main() {
         ),
       );
 
-      animator = SilkyScrollAnimator(delegate, _TestVSync());
+      animator = SilkyScrollAnimator(
+        delegate,
+        _TestVSync(),
+        maxBounceOvershoot: 150,
+      );
       animator.animateToScroll(100, 1.0);
       expect(delegate.isOnSilkyScrolling, isTrue);
 
@@ -107,7 +111,11 @@ void main() {
         ),
       );
 
-      animator = SilkyScrollAnimator(delegate, _TestVSync());
+      animator = SilkyScrollAnimator(
+        delegate,
+        _TestVSync(),
+        maxBounceOvershoot: 150,
+      );
       animator.animateToScroll(100, 1.0);
       // futurePosition = offset(0) + 100 * 1.0 * 0.5 = 50
       expect(delegate.futurePosition, 50.0);
@@ -117,7 +125,7 @@ void main() {
     });
 
     testWidgets(
-      'futurePosition is clamped to maxScrollExtent for non-bouncing',
+      'futurePosition is clamped to maxScrollExtent + maxBounceOvershoot',
       (tester) async {
         await tester.pumpWidget(
           MaterialApp(
@@ -129,13 +137,21 @@ void main() {
           ),
         );
 
-        animator = SilkyScrollAnimator(delegate, _TestVSync());
+        final bouncingDelegate = _FakeAnimatorDelegate(
+          clientController: controller,
+          bouncingPhysics: true,
+        );
+        animator = SilkyScrollAnimator(
+          bouncingDelegate,
+          _TestVSync(),
+          maxBounceOvershoot: 150,
+        );
         final maxExtent = controller.position.maxScrollExtent;
         // Scroll way past max
         animator.animateToScroll(maxExtent * 10, 1.0);
-        expect(delegate.futurePosition, maxExtent);
+        expect(bouncingDelegate.futurePosition, maxExtent + 150);
 
-        await tester.pumpAndSettle();
+        animator.cancel();
         animator.dispose();
       },
     );
@@ -153,7 +169,11 @@ void main() {
         ),
       );
 
-      animator = SilkyScrollAnimator(delegate, _TestVSync());
+      animator = SilkyScrollAnimator(
+        delegate,
+        _TestVSync(),
+        maxBounceOvershoot: 150,
+      );
 
       // Scroll down
       animator.animateToScroll(100, 1.0);
@@ -180,7 +200,11 @@ void main() {
         ),
       );
 
-      animator = SilkyScrollAnimator(delegate, _TestVSync());
+      animator = SilkyScrollAnimator(
+        delegate,
+        _TestVSync(),
+        maxBounceOvershoot: 150,
+      );
       animator.animateToScroll(100, 1.0);
       expect(delegate.isOnSilkyScrolling, isTrue);
 

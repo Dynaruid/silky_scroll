@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:silky_scroll/silky_scroll.dart';
 
@@ -20,6 +22,7 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
   bool _stretch = true;
   Curve _curve = Curves.easeOutQuart;
   bool _panelOpen = true;
+  PointerDeviceKind? _deviceKind;
 
   static const _curveOptions = <String, Curve>{
     'easeOutQuart': Curves.easeOutQuart,
@@ -50,7 +53,27 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Config Playground')),
+      appBar: AppBar(
+        title: const Text('Config Playground'),
+        actions: [
+          if (_deviceKind != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Chip(
+                avatar: Icon(
+                  _deviceKind == PointerDeviceKind.mouse
+                      ? Icons.mouse
+                      : _deviceKind == PointerDeviceKind.touch
+                      ? Icons.touch_app
+                      : Icons.gesture,
+                  size: 16,
+                ),
+                label: Text(_deviceKind!.name),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+        ],
+      ),
       body: Stack(
         children: [
           // ── Side-by-side comparison (full area) ───────────────────────
@@ -62,6 +85,11 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
                   label: 'SilkyScroll',
                   accent: cs.primary,
                   config: _config,
+                  onDeviceKindChanged: (kind) {
+                    if (kind != _deviceKind) {
+                      setState(() => _deviceKind = kind);
+                    }
+                  },
                 ),
               ),
 
@@ -224,11 +252,13 @@ class _ComparisonPane extends StatelessWidget {
     required this.label,
     required this.accent,
     required this.config,
+    this.onDeviceKindChanged,
   });
 
   final String label;
   final Color accent;
   final SilkyScrollConfig config;
+  final ValueChanged<PointerDeviceKind?>? onDeviceKindChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +269,12 @@ class _ComparisonPane extends StatelessWidget {
           child: SilkyScroll.fromConfig(
             key: ValueKey(config),
             config: config,
-            builder: (context, controller, physics) {
+            builder: (context, controller, physics, deviceKind) {
+              if (onDeviceKindChanged != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  onDeviceKindChanged!(deviceKind);
+                });
+              }
               return ListView.builder(
                 controller: controller,
                 physics: physics,

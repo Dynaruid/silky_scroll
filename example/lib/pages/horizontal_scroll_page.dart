@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:silky_scroll/silky_scroll.dart';
 
@@ -17,6 +18,7 @@ class HorizontalScrollPage extends StatefulWidget {
 class _HorizontalScrollPageState extends State<HorizontalScrollPage> {
   bool _stretch = true;
   double _speed = 1.0;
+  PointerDeviceKind? _deviceKind;
 
   static const _categories = <(String, IconData, MaterialColor)>[
     ('Featured', Icons.star, Colors.amber),
@@ -32,6 +34,22 @@ class _HorizontalScrollPageState extends State<HorizontalScrollPage> {
       appBar: AppBar(
         title: const Text('Horizontal Scroll'),
         actions: [
+          if (_deviceKind != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Chip(
+                avatar: Icon(
+                  _deviceKind == PointerDeviceKind.mouse
+                      ? Icons.mouse
+                      : _deviceKind == PointerDeviceKind.touch
+                      ? Icons.touch_app
+                      : Icons.gesture,
+                  size: 16,
+                ),
+                label: Text(_deviceKind!.name),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
           // Speed chip
           Padding(
             padding: const EdgeInsets.only(right: 4),
@@ -64,7 +82,12 @@ class _HorizontalScrollPageState extends State<HorizontalScrollPage> {
         physics: const BouncingScrollPhysics(),
         enableStretchEffect: _stretch,
         scrollSpeed: _speed,
-        builder: (context, controller, physics) {
+        builder: (context, controller, physics, deviceKind) {
+          if (deviceKind != _deviceKind) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _deviceKind = deviceKind);
+            });
+          }
           return ListView.builder(
             controller: controller,
             physics: physics,
@@ -136,7 +159,7 @@ class _CategorySection extends StatelessWidget {
             physics: const BouncingScrollPhysics(),
             enableStretchEffect: stretch,
             scrollSpeed: speed,
-            builder: (context, controller, physics) {
+            builder: (context, controller, physics, _) {
               return ListView.builder(
                 controller: controller,
                 physics: physics,
