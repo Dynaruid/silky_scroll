@@ -159,22 +159,40 @@ class SilkyScrollState extends ChangeNotifier
   // ── Scroll delta samples ──────────────────────────────────────────
   final List<ScrollDeltaSample> _recentDeltaSamples = [];
 
+  // Speed cache — reused within the same ~16 ms frame.
+  double? _cachedScrollSpeed;
+  int _cachedSpeedTimeMs = 0;
+
   /// Current scroll speed in logical-pixels / second.
   ///
-  /// Computed from recent delta samples using time-window grouping
-  double get currentScrollSpeed =>
-      ScrollDeltaSampleAnalyzer.calculateAverageSpeed(_recentDeltaSamples);
-
-  /// Unmodifiable snapshot of the recent delta samples.
-  List<ScrollDeltaSample> get recentDeltaSamples =>
-      List.unmodifiable(_recentDeltaSamples);
+  /// Computed from recent delta samples using time-window grouping.
+  /// The result is cached for ~16 ms (one frame) to avoid redundant
+  /// recalculation across multiple call-sites per event.
+  double get currentScrollSpeed {
+    final int now = _clock();
+    if (_cachedScrollSpeed != null && now - _cachedSpeedTimeMs < 16) {
+      return _cachedScrollSpeed!;
+    }
+    _cachedScrollSpeed = ScrollDeltaSampleAnalyzer.calculateAverageSpeed(
+      _recentDeltaSamples,
+    );
+    _cachedSpeedTimeMs = now;
+    return _cachedScrollSpeed!;
+  }
 
   void _recordDelta(double delta) {
     final int now = _clock();
     _recentDeltaSamples.add(ScrollDeltaSample(delta, now));
-    // Trim old samples.
+    // Trim old samples — exploit time-sorted order.
     final int cutoff = now - _kDeltaSampleRetentionMs;
-    _recentDeltaSamples.removeWhere((s) => s.timeMs < cutoff);
+    int removeCount = 0;
+    for (final sample in _recentDeltaSamples) {
+      if (sample.timeMs >= cutoff) break;
+      removeCount++;
+    }
+    if (removeCount > 0) {
+      _recentDeltaSamples.removeRange(0, removeCount);
+    }
   }
 
   // ── Composed helpers ──────────────────────────────────────────────

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.1
+
+### Changed
+
+- **`currentScrollSpeed` caching**: Results are now cached for ~16 ms (one frame), eliminating redundant `calculateAverageSpeed` calls from `_checkNeedLocking`, `_checkEdgeLockOnTouchUp`, and `_tryGestureUnlock` within the same frame.
+- **`_recordDelta` trimming optimization**: Replaced `removeWhere` O(n) full-scan with `removeRange(0, count)` exploiting the time-sorted order of samples.
+- **`calculateAverageSpeed` allocation reduction**: Rewrote to single-pass inline aggregation, removing 5+ intermediate list allocations (`List.of`, `windowGroups`, `windowAggregates`, `windowSpeeds`, `movementSpeeds`) per call.
+- **`blockOverscrollBehaviorXHtml` Timer reuse**: Replaced per-event cancel+recreate pattern with timestamp tracking and a single reusable Timer, reducing Timer object churn during rapid trackpad scrolling.
+- **`scrollDeltaX` comparison**: Replaced `(scrollDeltaX * 10).toInt() != 0` with `scrollDeltaX.abs() >= 0.1` for clarity and to avoid unnecessary float-to-int conversion.
+
+### Removed
+
+- Removed `recentDeltaSamples` public getter (unused externally).
+
 ## 2.1.0
 
 ### Breaking

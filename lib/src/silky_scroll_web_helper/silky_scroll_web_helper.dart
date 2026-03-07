@@ -10,6 +10,7 @@ class SilkyScrollWebManager implements SilkyScrollWebManagerInterface {
     rootBodyElement = web.window.document.body;
   }
   Timer? _overscrollBehaviorXTimer;
+  int _lastBlockTimeMs = 0;
   late final web.HTMLElement? rootBodyElement;
 
   @override
@@ -21,20 +22,24 @@ class SilkyScrollWebManager implements SilkyScrollWebManagerInterface {
 
   @override
   void blockOverscrollBehaviorXHtml() {
-    if (rootBodyElement != null) {
-      if (_overscrollBehaviorXTimer?.isActive ?? false) {
-        _overscrollBehaviorXTimer?.cancel();
-        _overscrollBehaviorXTimer = Timer(
-          _kOverscrollBehaviorXResetDelay,
-          resetOverscrollBehaviorX,
-        );
+    if (rootBodyElement == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _lastBlockTimeMs = now;
+    if (_overscrollBehaviorXTimer?.isActive ?? false) return;
+    rootBodyElement!.style.overscrollBehaviorX = 'none';
+    _overscrollBehaviorXTimer = Timer(_kOverscrollBehaviorXResetDelay, () {
+      final elapsed = DateTime.now().millisecondsSinceEpoch - _lastBlockTimeMs;
+      if (elapsed >= _kOverscrollBehaviorXResetDelay.inMilliseconds) {
+        resetOverscrollBehaviorX();
       } else {
-        rootBodyElement!.style.overscrollBehaviorX = 'none';
         _overscrollBehaviorXTimer = Timer(
-          _kOverscrollBehaviorXResetDelay,
+          Duration(
+            milliseconds:
+                _kOverscrollBehaviorXResetDelay.inMilliseconds - elapsed,
+          ),
           resetOverscrollBehaviorX,
         );
       }
-    }
+    });
   }
 }

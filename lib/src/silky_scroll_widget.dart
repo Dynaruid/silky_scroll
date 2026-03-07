@@ -233,7 +233,7 @@ class _SilkyScrollState extends State<SilkyScroll>
 
     // ── Step 2: Heuristic — horizontal delta or tiny vertical delta → trackpad ──
     // ★ Runs before timer checks → detects device switch immediately ★
-    if ((scrollDeltaX * 10).toInt() != 0 || scrollDeltaY.abs() < 4) {
+    if (scrollDeltaX.abs() >= 0.1 || scrollDeltaY.abs() < 4) {
       _handleTrackpadCheck(PointerDeviceKind.trackpad);
       _ensureTrackpadMode();
       silkyScrollState.triggerTouchAction(

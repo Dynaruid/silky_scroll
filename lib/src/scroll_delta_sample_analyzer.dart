@@ -38,6 +38,11 @@ abstract final class ScrollDeltaSampleAnalyzer {
   /// Groups samples into [windowMs]-wide buckets, computes per-window
   /// speeds, and filters out stationary segments.
   /// Positive = forward / down.
+  ///
+  /// Assumes [samples] are already in chronological order (as maintained
+  /// by `_recordDelta`).  Falls back to sorting only when the first
+  /// sample's timestamp exceeds the last — which should not happen in
+  /// normal operation.
   static double calculateAverageSpeed(
     List<ScrollDeltaSample> samples, {
     int windowMs = kDefaultWindowMs,
@@ -45,68 +50,94 @@ abstract final class ScrollDeltaSampleAnalyzer {
   }) {
     if (samples.length < 2) return 0.0;
 
-    final sorted = List.of(samples)
-      ..sort((a, b) => a.timeMs.compareTo(b.timeMs));
+    // Fast-path: samples are expected to be time-sorted already.
+    // Only sort when the invariant is violated (defensive guard).
+    List<ScrollDeltaSample> sorted;
+    if (samples.first.timeMs <= samples.last.timeMs) {
+      sorted = samples;
+    } else {
+      sorted = List.of(samples)..sort((a, b) => a.timeMs.compareTo(b.timeMs));
+    }
+
     final int totalTimeDiffMs = sorted.last.timeMs - sorted.first.timeMs;
     if (totalTimeDiffMs <= 0) return 0.0;
 
-    // Group into time windows.
-    final List<List<ScrollDeltaSample>> windowGroups = [];
+    // Single-pass: accumulate per-window aggregates (delta sum, time
+    // sum, count) without allocating intermediate group lists.
+    // Then compute inter-window speeds inline.
+
+    // Window aggregate accumulators.
+    double prevDeltaSum = 0.0;
+    int prevTimeSum = 0;
+    int prevCount = 0;
+
+    double curDeltaSum = 0.0;
+    int curTimeSum = 0;
+    int curCount = 0;
     int windowStart = sorted.first.timeMs;
-    List<ScrollDeltaSample> currentGroup = [];
+
+    // Speed accumulators (avoid allocating a List<double>).
+    double speedSum = 0.0;
+    int speedCount = 0;
+    double movementSpeedSum = 0.0;
+    int movementSpeedCount = 0;
+
+    bool firstWindowDone = false;
+
+    void _flushWindow() {
+      if (curCount == 0) return;
+      if (!firstWindowDone) {
+        // Store as previous; no speed to compute yet.
+        prevDeltaSum = curDeltaSum;
+        prevTimeSum = curTimeSum;
+        prevCount = curCount;
+        firstWindowDone = true;
+      } else {
+        final double prevAvgTime = prevTimeSum / prevCount;
+        final double curAvgTime = curTimeSum / curCount;
+        final double dt = curAvgTime - prevAvgTime;
+        if (dt > 0) {
+          final double speed = (curDeltaSum / dt) * 1000.0;
+          speedSum += speed;
+          speedCount++;
+          if (speed.abs() > minSpeedThresholdPxS) {
+            movementSpeedSum += speed;
+            movementSpeedCount++;
+          }
+        }
+        // Shift current → previous.
+        prevDeltaSum = curDeltaSum;
+        prevTimeSum = curTimeSum;
+        prevCount = curCount;
+      }
+    }
 
     for (final sample in sorted) {
       if (sample.timeMs < windowStart + windowMs) {
-        currentGroup.add(sample);
+        curDeltaSum += sample.delta;
+        curTimeSum += sample.timeMs;
+        curCount++;
       } else {
-        if (currentGroup.isNotEmpty) windowGroups.add(currentGroup);
-        currentGroup = [sample];
+        _flushWindow();
+        curDeltaSum = sample.delta;
+        curTimeSum = sample.timeMs;
+        curCount = 1;
         windowStart = sample.timeMs;
       }
     }
-    if (currentGroup.isNotEmpty) windowGroups.add(currentGroup);
+    // Flush the last window.
+    _flushWindow();
 
-    // Compute per-window aggregate (sum of deltas, avg time).
-    final windowAggregates = windowGroups.map((group) {
-      final double sumDelta = group.fold(0.0, (s, e) => s + e.delta);
-      final double avgTime =
-          group.map((e) => e.timeMs).reduce((a, b) => a + b) / group.length;
-      return (delta: sumDelta, timeMs: avgTime);
-    }).toList();
-
-    if (windowAggregates.length < 2) {
-      final double totalDelta = sorted.fold(0.0, (s, e) => s + e.delta);
+    if (speedCount == 0) {
+      // Fewer than 2 windows — fall back to total delta / total time.
+      double totalDelta = 0.0;
+      for (final s in sorted) {
+        totalDelta += s.delta;
+      }
       return (totalDelta / totalTimeDiffMs) * 1000.0;
     }
 
-    // Inter-window speeds.
-    final List<double> windowSpeeds = [];
-    for (int i = 1; i < windowAggregates.length; i++) {
-      final prev = windowAggregates[i - 1];
-      final curr = windowAggregates[i];
-      final double dt = curr.timeMs - prev.timeMs;
-      if (dt <= 0) continue;
-      // Speed based on cumulative delta between windows.
-      windowSpeeds.add((curr.delta / dt) * 1000.0);
-    }
-
-    if (windowSpeeds.isEmpty) {
-      final double totalDelta = sorted.fold(0.0, (s, e) => s + e.delta);
-      return (totalDelta / totalTimeDiffMs) * 1000.0;
-    }
-
-    // Remove stationary segments.
-    final movementSpeeds = windowSpeeds
-        .where((s) => s.abs() > minSpeedThresholdPxS)
-        .toList();
-
-    if (movementSpeeds.isEmpty) return _mean(windowSpeeds);
-
-    return _mean(movementSpeeds);
+    if (movementSpeedCount == 0) return speedSum / speedCount;
+    return movementSpeedSum / movementSpeedCount;
   }
-
-  // ── Internal helpers ──────────────────────────────────────────
-
-  static double _mean(List<double> values) =>
-      values.reduce((a, b) => a + b) / values.length;
 }
