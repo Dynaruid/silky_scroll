@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.3.0
+
+### Added
+
+- **Nested scroll forwarding on edge lock**: When an inner `SilkyScroll` reaches a scroll boundary and becomes edge-locked, subsequent touch and trackpad deltas in the same (outward) direction are now forwarded to the nearest ancestor `Scrollable`, allowing the outer scroll view to take over scrolling seamlessly.
+
+### Changed
+
+- `SilkyScrollState` now accepts a `BuildContext` reference (set automatically by the widget) to locate ancestor scrollables at runtime.
+- `handleTouchScroll` checks the edge-lock phase and delta direction before deciding whether to forward to the ancestor or continue internal processing.
+
 ## 2.2.2
 
 ### Fixed

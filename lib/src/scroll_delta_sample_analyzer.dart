@@ -4,7 +4,7 @@ import 'scroll_delta_sample.dart';
 const int kDefaultSampleRetentionMs = 1000;
 
 /// Default time-window size for grouping samples in V3 speed calc.
-const int kDefaultWindowMs = 100;
+const int kDefaultWindowMs = 60;
 
 /// Default minimum speed threshold (px/s) below which a segment
 /// is considered stationary and excluded from the average.

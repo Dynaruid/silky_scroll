@@ -143,6 +143,7 @@ class _SilkyScrollState extends State<SilkyScroll>
   late final SilkyScrollState silkyScrollState;
   late final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
   late ScrollPhysics currentPhysics;
+  bool _lastBlocked = false;
   PointerDeviceKind? _currentDeviceKind;
   @override
   void initState() {
@@ -165,7 +166,7 @@ class _SilkyScrollState extends State<SilkyScroll>
       debugMode: widget.debugMode,
       vsync: this,
     );
-    currentPhysics = widget.physics;
+    currentPhysics = silkyScrollState.currentScrollPhysics;
     silkyScrollState.addListener(_onPhysicsChanged);
   }
 
@@ -174,17 +175,18 @@ class _SilkyScrollState extends State<SilkyScroll>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.physics != widget.physics) {
       silkyScrollState.setWidgetScrollPhysics(scrollPhysics: widget.physics);
-      currentPhysics = widget.physics;
     }
   }
 
   /// Called whenever [SilkyScrollState] fires [notifyListeners].
-  /// Only triggers a rebuild when the physics reference actually changed.
+  /// Triggers a rebuild when the physics reference or blocking state changed.
   void _onPhysicsChanged() {
     final newPhysics = silkyScrollState.currentScrollPhysics;
-    if (newPhysics != currentPhysics) {
+    final newBlocked = silkyScrollState.isScrollBlocked;
+    if (newPhysics != currentPhysics || newBlocked != _lastBlocked) {
       setState(() {
         currentPhysics = newPhysics;
+        _lastBlocked = newBlocked;
       });
     }
   }
@@ -280,6 +282,7 @@ class _SilkyScrollState extends State<SilkyScroll>
 
   @override
   Widget build(BuildContext context) {
+    silkyScrollState.widgetContext = context;
     return MouseRegion(
       onEnter: (e) {
         silkyScrollMousePointerManager.enteredKey(silkyScrollState.instanceKey);

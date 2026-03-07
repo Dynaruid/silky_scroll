@@ -1,5 +1,71 @@
 import 'package:flutter/material.dart';
 
+/// Mutable state controlling whether scrolling is dynamically blocked.
+///
+/// Shared across all [DynamicBlockingScrollPhysics] instances created
+/// by [DynamicBlockingScrollPhysics.applyTo], so flipping [isBlocked]
+/// immediately affects the active [ScrollPosition] without changing
+/// the physics [runtimeType].
+class ScrollBlockingState {
+  bool isBlocked = false;
+}
+
+/// Scroll physics that can dynamically block/unblock user scrolling
+/// without changing [runtimeType].
+///
+/// When [blockingState.isBlocked] is `true`, behaves like
+/// [NeverScrollableScrollPhysics]: user drag produces zero offset,
+/// ballistic simulations are suppressed, and pointer-scroll events
+/// are rejected.
+///
+/// Because the [runtimeType] stays constant, Flutter's
+/// `Scrollable._shouldUpdatePosition` never triggers a position
+/// recreation, preserving the active drag gesture across
+/// block ↔ unblock transitions.
+final class DynamicBlockingScrollPhysics extends ScrollPhysics {
+  const DynamicBlockingScrollPhysics({
+    super.parent,
+    required this.blockingState,
+  });
+
+  final ScrollBlockingState blockingState;
+
+  @override
+  DynamicBlockingScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return DynamicBlockingScrollPhysics(
+      parent: buildParent(ancestor),
+      blockingState: blockingState,
+    );
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    if (blockingState.isBlocked) return 0.0;
+    return super.applyPhysicsToUserOffset(position, offset);
+  }
+
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) {
+    if (blockingState.isBlocked) return false;
+    return super.shouldAcceptUserOffset(position);
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    if (blockingState.isBlocked) return null;
+    return super.createBallisticSimulation(position, velocity);
+  }
+
+  @override
+  bool get allowImplicitScrolling {
+    if (blockingState.isBlocked) return false;
+    return super.allowImplicitScrolling;
+  }
+}
+
 /// Scroll physics that completely blocks scrolling.
 ///
 /// Used internally by [SilkyScroll] to temporarily disable scroll

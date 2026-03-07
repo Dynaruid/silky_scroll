@@ -23,6 +23,7 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
   final _lastDelta = ValueNotifier<double>(0);
   final _edgeOverscrollDelta = ValueNotifier<double>(0);
   final _deviceKind = ValueNotifier<PointerDeviceKind?>(null);
+  final _physicsLabel = ValueNotifier<String>('—');
 
   /// Rolling log of recent scroll events (newest first).
   final _log = ValueNotifier<List<_ScrollEvent>>([]);
@@ -43,6 +44,7 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
     _lastDelta.dispose();
     _edgeOverscrollDelta.dispose();
     _deviceKind.dispose();
+    _physicsLabel.dispose();
     _log.dispose();
     super.dispose();
   }
@@ -122,6 +124,19 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
                       color: cs.tertiary,
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  ValueListenableBuilder<String>(
+                    valueListenable: _physicsLabel,
+                    builder: (_, label, __) {
+                      final isBlocked = label == 'Blocked';
+                      return _Indicator(
+                        icon: isBlocked ? Icons.lock : Icons.lock_open,
+                        label: 'physics',
+                        value: label,
+                        color: isBlocked ? cs.error : cs.primary,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -132,7 +147,7 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
           Expanded(
             child: SilkyScroll(
               controller: _controller,
-              physics: const BouncingScrollPhysics(),
+              physics: ClampingScrollPhysics(),
               enableStretchEffect: true,
               onScroll: _onScroll,
               onEdgeOverScroll: _onEdgeOverScroll,
@@ -141,6 +156,12 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
                 if (deviceKind != _deviceKind.value) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) _deviceKind.value = deviceKind;
+                  });
+                }
+                final label = _physicsName(physics);
+                if (label != _physicsLabel.value) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _physicsLabel.value = label;
                   });
                 }
                 return ListView.builder(
@@ -229,6 +250,35 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
+
+String _physicsName(ScrollPhysics physics) {
+  // Walk the chain to find the most descriptive type.
+  ScrollPhysics? p = physics;
+  while (p != null) {
+    if (p is DynamicBlockingScrollPhysics) {
+      return p.blockingState.isBlocked ? 'Blocked' : _parentName(p.parent);
+    }
+    final name = p.runtimeType.toString();
+    if (name == 'BlockedScrollPhysics') return 'Blocked';
+    if (name == 'ClampingScrollPhysics') return 'Clamping';
+    if (name == 'BouncingScrollPhysics') return 'Bouncing';
+    if (name == 'NeverScrollableScrollPhysics') return 'Never';
+    if (name == 'AlwaysScrollableScrollPhysics') return 'Always';
+    p = p.parent;
+  }
+  return physics.runtimeType.toString().replaceAll('ScrollPhysics', 'Default');
+}
+
+String _parentName(ScrollPhysics? p) {
+  while (p != null) {
+    final name = p.runtimeType.toString();
+    if (name == 'ClampingScrollPhysics') return 'Clamping';
+    if (name == 'BouncingScrollPhysics') return 'Bouncing';
+    if (name == 'AlwaysScrollableScrollPhysics') return 'Always';
+    p = p.parent;
+  }
+  return 'Default';
+}
 
 class _ScrollEvent {
   _ScrollEvent(this.type, this.delta);

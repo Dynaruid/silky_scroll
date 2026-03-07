@@ -403,9 +403,9 @@ void main() {
       state.handleTouchScroll(-10.0);
       state.onTouchUp();
       expect(state.isEdgeLocked, isTrue);
-      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+      expect(state.isScrollBlocked, isTrue);
       // Fully blocked — unlock is handled by tryGestureUnlock
-      expect(state.currentScrollPhysics, isA<NeverScrollableScrollPhysics>());
+      expect(state.currentScrollPhysics, isA<DynamicBlockingScrollPhysics>());
 
       state.dispose();
     });
@@ -431,11 +431,11 @@ void main() {
       state.onTouchUp();
       expect(state.isEdgeLocked, isTrue);
 
-      // New touch preserves lock (BlockedScrollPhysics;
+      // New touch preserves lock (scroll blocked;
       // unlock is handled by tryGestureUnlock)
       state.onTouchDown();
       expect(state.isEdgeLocked, isTrue);
-      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+      expect(state.isScrollBlocked, isTrue);
 
       state.dispose();
     });
@@ -517,6 +517,70 @@ void main() {
       // onTouchUp should apply edge lock, overriding overscrollLocked
       state.onTouchUp();
       expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
+
+      state.dispose();
+    });
+
+    testWidgets('trackpad inward delta unlocks edge lock immediately', (
+      tester,
+    ) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Simulate trackpad scroll at top edge (no touch down/up for trackpad)
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+
+      // Let edge-check timer fire → edgeLocked
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(state.isEdgeLocked, isTrue);
+      // Trackpad edge-lock does NOT block physics — Flutter's own
+      // PointerScrollEvent propagation handles nested scrolling.
+      expect(state.isScrollBlocked, isFalse);
+
+      // Single inward (positive) delta should unlock immediately
+      fakeTime += 20;
+      state.handleTouchScroll(5.0);
+      expect(state.isEdgeLocked, isFalse);
+      expect(state.isScrollBlocked, isFalse);
+      // After unlock, trackpad re-enters edgeCheckPending (normal flow).
+      // This is correct — the 50ms check will find no edge condition.
+
+      state.dispose();
+    });
+
+    testWidgets('trackpad outward delta keeps edge lock', (tester) async {
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+      await tester.pumpWidget(
+        _buildScrollable(controller: state.clientController),
+      );
+
+      // Lock at top edge
+      state.handleTouchScroll(-10.0);
+      fakeTime += 50;
+      state.handleTouchScroll(-10.0);
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(state.isEdgeLocked, isTrue);
+
+      // Continued outward (negative) delta should NOT unlock
+      fakeTime += 20;
+      state.handleTouchScroll(-3.0);
+      expect(state.isEdgeLocked, isTrue);
+      // Trackpad edge-lock does NOT block physics.
+      expect(state.isScrollBlocked, isFalse);
 
       state.dispose();
     });
@@ -655,7 +719,7 @@ void main() {
       state.isRecoilScroll = true;
       state.onAnimationStateChanged();
 
-      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+      expect(state.isScrollBlocked, isTrue);
     });
 
     testWidgets('onAnimationStateChanged restores physics when recoil ends', (
@@ -672,11 +736,11 @@ void main() {
       // Start and end recoil
       state.isRecoilScroll = true;
       state.onAnimationStateChanged();
-      expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+      expect(state.isScrollBlocked, isTrue);
 
       state.isRecoilScroll = false;
       state.onAnimationStateChanged();
-      expect(state.currentScrollPhysics, isA<BouncingScrollPhysics>());
+      expect(state.isScrollBlocked, isFalse);
     });
 
     testWidgets(
@@ -699,12 +763,12 @@ void main() {
         state.handleTouchScroll(-10.0);
         state.onTouchUp();
         expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
-        expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+        expect(state.isScrollBlocked, isTrue);
 
         // Simulate recoil end while edge is locked — should NOT restore
         state.isRecoilScroll = false;
         state.onAnimationStateChanged();
-        expect(state.currentScrollPhysics, isA<BlockedScrollPhysics>());
+        expect(state.isScrollBlocked, isTrue);
 
         state.dispose();
       },

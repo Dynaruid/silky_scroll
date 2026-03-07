@@ -10,7 +10,11 @@ export 'src/silky_scroll_widget.dart'
     show SilkyScroll, SilkyScrollWidgetBuilder;
 export 'src/silky_scroll_controller.dart'
     show SilkyScrollController, SilkyScrollPosition;
-export 'src/blocked_scroll_physics.dart' show BlockedScrollPhysics;
+export 'src/blocked_scroll_physics.dart'
+    show
+        BlockedScrollPhysics,
+        DynamicBlockingScrollPhysics,
+        ScrollBlockingState;
 export 'src/silky_scroll_config.dart' show SilkyScrollConfig;
 export 'src/silky_scroll_state.dart' show ScrollPhysicsPhase;
 export 'src/scroll_delta_sample.dart' show ScrollDeltaSample;

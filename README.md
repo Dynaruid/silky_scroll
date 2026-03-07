@@ -16,7 +16,7 @@
 
 - **Smooth Scroll Animation** — Interpolates mouse wheel input for seamless scrolling
 - **Smart Input Detection** — Automatically detects mouse, trackpad, and touch to apply appropriate physics
-- **Edge Locking** — Prevents unintended scroll propagation to parent views at scroll boundaries
+- **Edge Locking & Nested Forwarding** — Locks scrolling at boundaries and automatically forwards touch/trackpad deltas to the parent scroll view
 - **Stretch Effect** — Supports Android stretch and iOS bounce overscroll effects
 - **Horizontal Scroll** — Supports both horizontal and vertical directions
 - **All Platforms** — Android, iOS, Web, Windows, macOS, Linux

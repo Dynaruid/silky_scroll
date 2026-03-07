@@ -11,9 +11,8 @@ import 'scroll_delta_sample.dart';
 import 'scroll_delta_sample_analyzer.dart';
 
 /// Magic number constants for scroll behavior tuning.
-const int _kScrollDisableCheckDelayMs = 100;
+const int _kScrollDisableCheckDelayMs = 50;
 const double _kMaxBounceOvershoot = 120;
-const double _kInwardVelocityThresholdPxS = 5.0;
 const int _kDeltaSampleRetentionMs = 1000;
 
 /// Describes the current physics-management phase.
@@ -58,7 +57,10 @@ class SilkyScrollState extends ChangeNotifier
     required TickerProvider vsync,
     int Function()? clock,
   }) : _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
-    currentScrollPhysics = widgetScrollPhysics;
+    currentScrollPhysics = DynamicBlockingScrollPhysics(
+      parent: widgetScrollPhysics,
+      blockingState: _blockingState,
+    );
     isPlatformBouncingScrollPhysics =
         widgetScrollPhysics is BouncingScrollPhysics;
 
@@ -111,7 +113,15 @@ class SilkyScrollState extends ChangeNotifier
 
   late ScrollPhysics currentScrollPhysics;
   late ScrollPhysics widgetScrollPhysics;
-  final BlockedScrollPhysics _blockedPhysics = const BlockedScrollPhysics();
+  final ScrollBlockingState _blockingState = ScrollBlockingState();
+
+  /// Sets [_blockingState.isBlocked] and notifies listeners when it
+  /// actually changes, so the widget tree can update the physics indicator.
+  void _setBlocked(bool value) {
+    if (_blockingState.isBlocked == value) return;
+    _blockingState.isBlocked = value;
+    notifyListeners();
+  }
 
   @override
   final void Function(double delta)? onScroll;
@@ -143,6 +153,9 @@ class SilkyScrollState extends ChangeNotifier
   /// Whether the scroll is currently locked at an edge.
   bool get isEdgeLocked => _physicsPhase == ScrollPhysicsPhase.edgeLocked;
 
+  /// Whether scrolling is currently dynamically blocked.
+  bool get isScrollBlocked => _blockingState.isBlocked;
+
   /// Whether the overscroll indicator is temporarily suppressed.
   bool get isOverscrollLocked =>
       _physicsPhase == ScrollPhysicsPhase.overscrollLocked;
@@ -155,6 +168,10 @@ class SilkyScrollState extends ChangeNotifier
   bool isOverScrolling = false;
   bool _isTouchActive = false;
   int _lockedEdgeDirection = 0;
+
+  /// The [BuildContext] of the [SilkyScroll] widget, used to locate
+  /// an ancestor [Scrollable] for delta forwarding on edge lock.
+  BuildContext? _widgetContext;
 
   // ── Scroll delta samples ──────────────────────────────────────────
   final List<ScrollDeltaSample> _recentDeltaSamples = [];
@@ -206,17 +223,13 @@ class SilkyScrollState extends ChangeNotifier
     if (isRecoilScroll) {
       // Block physics during recoil so BouncingScrollPhysics does not
       // trigger overscroll visual effects while jumpTo() overshoots.
-      if (currentScrollPhysics is! BlockedScrollPhysics) {
-        currentScrollPhysics = _blockedPhysics;
-        notifyListeners();
-      }
+      _setBlocked(true);
     } else {
       // Recoil finished — restore normal physics only after the
       // position has fully returned to within scroll bounds.
-      if (currentScrollPhysics is BlockedScrollPhysics &&
+      if (_blockingState.isBlocked &&
           _physicsPhase != ScrollPhysicsPhase.edgeLocked) {
-        currentScrollPhysics = widgetScrollPhysics;
-        notifyListeners();
+        _setBlocked(false);
       }
     }
   }
@@ -239,6 +252,10 @@ class SilkyScrollState extends ChangeNotifier
   }
 
   // ── Public API (delegated) ───────────────────────────────────────
+
+  /// Supplies the widget [BuildContext] so that the state can find an
+  /// ancestor [Scrollable] for delta forwarding when edge-locked.
+  set widgetContext(BuildContext context) => _widgetContext = context;
 
   /// Routes touch/trackpad input through [SilkyInputHandler].
   void triggerTouchAction(Offset delta, PointerDeviceKind kind) =>
@@ -326,12 +343,16 @@ class SilkyScrollState extends ChangeNotifier
       speed,
       clientController,
     );
-    if (edgeResult != 0 &&
-        currentScrollPhysics is! BlockedScrollPhysics &&
-        !isOverScrolling) {
+    if (edgeResult != 0 && !_blockingState.isBlocked && !isOverScrolling) {
       _lockedEdgeDirection = edgeResult;
-      currentScrollPhysics = _blockedPhysics;
-      notifyListeners();
+      // Don't block physics for trackpad — Flutter's own
+      // _targetScrollOffsetForPointerScroll already skips the inner
+      // Scrollable when the target offset equals the current pixels,
+      // letting PointerScrollEvents propagate to outer scrollables.
+      // Blocking physics here would prevent both inner and outer from
+      // scrolling, causing the "completely locked" feeling in nested
+      // scenarios.  The edgeLocked phase still suppresses the
+      // overscroll indicator via the NotificationListener check.
 
       _transitionTo(
         ScrollPhysicsPhase.edgeLocked,
@@ -369,8 +390,7 @@ class SilkyScrollState extends ChangeNotifier
       );
     }
 
-    currentScrollPhysics = _blockedPhysics;
-    notifyListeners();
+    _setBlocked(true);
 
     _transitionTo(
       ScrollPhysicsPhase.edgeLocked,
@@ -379,29 +399,31 @@ class SilkyScrollState extends ChangeNotifier
     );
   }
 
-  /// Checks whether the pointer gesture has moved enough in the
-  /// inward direction (away from the locked edge) to release the lock.
+  /// Checks whether the latest scroll delta is in the inward direction
+  /// (away from the locked edge) to release the lock.
   ///
-  /// Called from [Listener.onPointerMove] while the touch is active
-  /// and the scroll is edge-locked.  Returns `true` if the lock was
+  /// Uses the immediate [lastDelta] rather than the averaged scroll
+  /// speed so that direction changes on trackpads are detected without
+  /// the latency of the 1-second sample window.
+  ///
+  /// Called from [handleTouchScroll] on every touch / trackpad event
+  /// while the scroll is edge-locked.  Returns `true` if the lock was
   /// released.
-  bool _tryGestureUnlock() {
+  bool _tryGestureUnlock(double lastDelta) {
     if (_physicsPhase != ScrollPhysicsPhase.edgeLocked ||
         _lockedEdgeDirection == 0) {
       return false;
     }
 
-    // Velocity sign indicates direction in screen coordinates:
-    //   top edge  (-1): inward velocity is negative → product < 0
-    //   bottom edge (1): inward velocity is positive → product < 0
-    final bool isInward =
-        currentScrollSpeed.abs() >= _kInwardVelocityThresholdPxS &&
-        _lockedEdgeDirection * currentScrollSpeed.toInt() < 0;
+    // Delta sign indicates direction in scroll coordinates:
+    //   top edge  (-1): inward delta is positive  → product < 0
+    //   bottom edge (1): inward delta is negative → product < 0
+    final bool isInward = _lockedEdgeDirection * lastDelta < 0;
 
     if (debugMode) {
       debugPrint(
         '[SilkyScroll] tryGestureUnlock | '
-        'edge=$_lockedEdgeDirection velocity=${currentScrollSpeed.toStringAsFixed(1)} '
+        'edge=$_lockedEdgeDirection delta=${lastDelta.toStringAsFixed(1)} '
         'inward=$isInward',
       );
     }
@@ -417,10 +439,41 @@ class SilkyScrollState extends ChangeNotifier
   void _unlockScroll() {
     if (!_disposed) {
       _lockedEdgeDirection = 0;
-      currentScrollPhysics = widgetScrollPhysics;
+      _setBlocked(false);
       _transitionTo(ScrollPhysicsPhase.normal);
-      notifyListeners();
     }
+  }
+
+  // ── Ancestor forwarding ──────────────────────────────────────────
+
+  /// Forwards [delta] to the nearest ancestor [Scrollable]'s
+  /// [ScrollPosition] when this scrollable is edge-locked.
+  ///
+  /// Returns `true` if the delta was successfully forwarded.
+  bool _forwardDeltaToAncestor(double delta) {
+    final BuildContext? ctx = _widgetContext;
+    if (ctx == null || !ctx.mounted) return false;
+
+    final ScrollableState? ancestor = Scrollable.maybeOf(ctx);
+    if (ancestor == null) return false;
+
+    final ScrollPosition pos = ancestor.position;
+    // Compute the new offset, clamped to the ancestor's scroll extent.
+    final double newOffset = (pos.pixels + delta).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    if ((newOffset - pos.pixels).abs() < 0.5) return false;
+
+    pos.jumpTo(newOffset);
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] ★ Forwarded delta=${delta.toStringAsFixed(1)} '
+        'to ancestor (${pos.pixels.toStringAsFixed(1)}→'
+        '${newOffset.toStringAsFixed(1)})',
+      );
+    }
+    return true;
   }
 
   // ── Touch scroll ─────────────────────────────────────────────────
@@ -437,7 +490,18 @@ class SilkyScrollState extends ChangeNotifier
       onEdgeOverScroll?.call(delta);
     }
 
-    _tryGestureUnlock();
+    if (_tryGestureUnlock(delta)) return;
+
+    // ── Edge-locked: forward outward delta to ancestor scrollable ──
+    if (_physicsPhase == ScrollPhysicsPhase.edgeLocked &&
+        _lockedEdgeDirection != 0) {
+      final bool isOutward = _lockedEdgeDirection * delta > 0;
+      if (isOutward) {
+        _forwardDeltaToAncestor(delta);
+        return;
+      }
+    }
+
     // ── Touch-active: no locking, just edge notification ──
     if (_isTouchActive) {
       //Touch에서는 onTouchUp에서 edge lock이 걸림
@@ -467,9 +531,8 @@ class SilkyScrollState extends ChangeNotifier
 
     if (isRecoilScroll) return;
 
-    if (currentScrollPhysics != widgetScrollPhysics) {
-      currentScrollPhysics = widgetScrollPhysics;
-      notifyListeners();
+    if (_blockingState.isBlocked) {
+      _setBlocked(false);
     }
 
     final double scrollDelta = delta;
@@ -507,8 +570,13 @@ class SilkyScrollState extends ChangeNotifier
 
   void setWidgetScrollPhysics({required ScrollPhysics scrollPhysics}) {
     _transitionTo(ScrollPhysicsPhase.normal);
+    _setBlocked(false);
     widgetScrollPhysics = scrollPhysics;
-    currentScrollPhysics = scrollPhysics;
+    currentScrollPhysics = DynamicBlockingScrollPhysics(
+      parent: scrollPhysics,
+      blockingState: _blockingState,
+    );
+    notifyListeners();
   }
 
   /// Activate overscroll-lock phase for [duration].
@@ -537,6 +605,7 @@ class SilkyScrollState extends ChangeNotifier
   void dispose() {
     // 1. Mark as disposed first to guard all timer/listener callbacks.
     _disposed = true;
+    _widgetContext = null;
 
     // 2. Cancel all pending timers and clear samples.
     _phaseTimer?.cancel();
