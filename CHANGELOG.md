@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.2.1
+
+### Changed
+
+- Added `Web: Overscroll Behavior Control` section to README documenting `setOverscrollBehaviorX()` API and `OverscrollBehaviorX` enum usage.
+
 ## 2.2.0
 
 ### Breaking

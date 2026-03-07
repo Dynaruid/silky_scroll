@@ -113,6 +113,32 @@ SilkyScroll.fromConfig(
 
 ---
 
+## Web: Overscroll Behavior Control
+
+On web, `SilkyScroll` automatically sets `overscroll-behavior-x: none` to block browser back/forward swipe gestures.
+
+If you need to restore or change this behavior, use `SilkyScrollMousePointerManager`:
+
+```dart
+import 'package:silky_scroll/silky_scroll.dart';
+
+// Restore browser default (allow swipe navigation)
+SilkyScrollMousePointerManager.instance
+    .setOverscrollBehaviorX(OverscrollBehaviorX.auto);
+
+// Block swipe gestures (default)
+SilkyScrollMousePointerManager.instance
+    .setOverscrollBehaviorX(OverscrollBehaviorX.none);
+
+// Prevent scroll chaining but keep glow/bounce effect
+SilkyScrollMousePointerManager.instance
+    .setOverscrollBehaviorX(OverscrollBehaviorX.contain);
+```
+
+> On non-web platforms this is a no-op.
+
+---
+
 ## Parameters
 
 | Parameter                    | Type                | Default               | Description                     |
