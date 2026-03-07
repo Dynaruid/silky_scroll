@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.2.2
+
+### Fixed
+
+- Removed stray `print` call in `SilkyScrollMousePointerManager.setOverscrollBehaviorX()`.
+- Renamed local variable `_flushWindow` → `flushWindow` in `ScrollDeltaSampleAnalyzer` to satisfy `no_leading_underscores_for_local_identifiers` lint.
+
 ## 2.2.1
 
 ### Changed

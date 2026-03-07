@@ -83,7 +83,7 @@ abstract final class ScrollDeltaSampleAnalyzer {
 
     bool firstWindowDone = false;
 
-    void _flushWindow() {
+    void flushWindow() {
       if (curCount == 0) return;
       if (!firstWindowDone) {
         // Store as previous; no speed to compute yet.
@@ -115,7 +115,7 @@ abstract final class ScrollDeltaSampleAnalyzer {
         curTimeSum += sample.timeMs;
         curCount++;
       } else {
-        _flushWindow();
+        flushWindow();
         curDeltaSum = sample.delta;
         curTimeSum = sample.timeMs;
         curCount = 1;
@@ -123,7 +123,7 @@ abstract final class ScrollDeltaSampleAnalyzer {
       }
     }
     // Flush the last window.
-    _flushWindow();
+    flushWindow();
 
     if (speedCount == 0) {
       // Fewer than 2 windows — fall back to total delta / total time.

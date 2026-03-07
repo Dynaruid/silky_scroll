@@ -121,7 +121,6 @@ final class SilkyScrollMousePointerManager {
   /// initialisation time.
   /// Use this to restore or change the behaviour explicitly.
   void setOverscrollBehaviorX(OverscrollBehaviorX value) {
-    print("Setting overscroll behavior to ${value.cssValue}");
     silkyScrollWebManager.setOverscrollBehaviorX(value);
   }
 
