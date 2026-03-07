@@ -3,17 +3,15 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'silky_scroll_web_helper/silky_scroll_non_web_helper.dart'
     if (dart.library.js_interop) 'silky_scroll_web_helper/silky_scroll_web_helper.dart';
+import 'silky_scroll_web_helper/silky_scroll_web_helper_interface.dart';
 
 final class SilkyScrollMousePointerManager {
   SilkyScrollMousePointerManager._internal() {
     silkyScrollWebManager = SilkyScrollWebManager();
+    silkyScrollWebManager.blockOverscrollBehaviorXHtml();
   }
 
-  factory SilkyScrollMousePointerManager() {
-    return _instance;
-  }
-
-  static final SilkyScrollMousePointerManager _instance =
+  static final SilkyScrollMousePointerManager instance =
       SilkyScrollMousePointerManager._internal();
 
   UniqueKey? reserveKey;
@@ -114,6 +112,17 @@ final class SilkyScrollMousePointerManager {
       reserveKey = null;
     }
     exitKey(key);
+  }
+
+  /// Manually sets the HTML body's `overscroll-behavior-x` CSS property.
+  ///
+  /// By default, [SilkyScrollMousePointerManager] blocks browser
+  /// back/forward swipe gestures ([OverscrollBehaviorX.none]) at
+  /// initialisation time.
+  /// Use this to restore or change the behaviour explicitly.
+  void setOverscrollBehaviorX(OverscrollBehaviorX value) {
+    print("Setting overscroll behavior to ${value.cssValue}");
+    silkyScrollWebManager.setOverscrollBehaviorX(value);
   }
 
   /// Resets all mutable state for test isolation.

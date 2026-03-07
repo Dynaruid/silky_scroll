@@ -39,7 +39,7 @@ SilkyScrollState _createState({
   TickerProvider? vsync,
   int Function()? clock,
 }) {
-  manager ??= SilkyScrollMousePointerManager();
+  manager ??= SilkyScrollMousePointerManager.instance;
   return SilkyScrollState(
     scrollController: scrollController,
     widgetScrollPhysics: physics,
@@ -62,7 +62,7 @@ void main() {
     late SilkyScrollMousePointerManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager();
+      manager = SilkyScrollMousePointerManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });
@@ -272,7 +272,7 @@ void main() {
     late SilkyScrollMousePointerManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager();
+      manager = SilkyScrollMousePointerManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });
@@ -629,7 +629,7 @@ void main() {
     late SilkyScrollMousePointerManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager();
+      manager = SilkyScrollMousePointerManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });
@@ -716,7 +716,7 @@ void main() {
     late SilkyScrollMousePointerManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager();
+      manager = SilkyScrollMousePointerManager.instance;
       manager.resetForTesting();
     });
 

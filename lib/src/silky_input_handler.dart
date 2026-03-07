@@ -36,9 +36,12 @@ final class SilkyInputHandler {
       scrollDelta = _delegate.isVertical ? -delta.dy : -delta.dx;
     }
 
+    if (kind == PointerDeviceKind.trackpad) {
+      _delegate.blockOverscrollBehaviorX();
+    }
+
     if (scrollDelta.abs() >= 0.5) {
       _delegate.handleTouchScroll(scrollDelta);
-      _delegate.blockOverscrollBehaviorX();
     }
     _delegate.onScroll?.call(scrollDelta);
   }

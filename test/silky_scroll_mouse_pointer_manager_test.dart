@@ -8,7 +8,7 @@ void main() {
 
     setUp(() {
       // SilkyScrollMousePointerManager is a singleton; reset its state.
-      manager = SilkyScrollMousePointerManager();
+      manager = SilkyScrollMousePointerManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });

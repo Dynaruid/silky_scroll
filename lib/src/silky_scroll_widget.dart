@@ -147,7 +147,7 @@ class _SilkyScrollState extends State<SilkyScroll>
   @override
   void initState() {
     super.initState();
-    silkyScrollMousePointerManager = SilkyScrollMousePointerManager();
+    silkyScrollMousePointerManager = SilkyScrollMousePointerManager.instance;
     silkyScrollState = SilkyScrollState(
       scrollController: widget.controller,
       widgetScrollPhysics: widget.physics,

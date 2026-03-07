@@ -47,7 +47,7 @@ class _FakeInputDelegate implements SilkyInputHandlerDelegate {
 
   @override
   final SilkyScrollMousePointerManager silkyScrollMousePointerManager =
-      SilkyScrollMousePointerManager();
+      SilkyScrollMousePointerManager.instance;
 }
 
 void main() {
@@ -100,21 +100,12 @@ void main() {
         expect(delegate.lastTouchDelta, -10.0);
       });
 
-      test('calls blockOverscrollBehaviorX when delta >= 0.5', () {
-        handler.triggerTouchAction(
-          const Offset(0, -5),
-          PointerDeviceKind.touch,
-        );
-        expect(delegate.blockCalled, isTrue);
-      });
-
       test('does not call handleTouchScroll when delta < 0.5', () {
         handler.triggerTouchAction(
           const Offset(0, 0.1),
           PointerDeviceKind.touch,
         );
         expect(delegate.lastTouchDelta, isNull);
-        expect(delegate.blockCalled, isFalse);
       });
 
       test('calls onScroll callback', () {

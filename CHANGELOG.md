@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.2.0
+
+### Breaking
+
+- **`SilkyScrollMousePointerManager` access changed**: Replaced factory constructor with `SilkyScrollMousePointerManager.instance` static field for explicit singleton semantics.
+- **`overscroll-behavior-x` default behavior changed**: Now permanently set to `none` on both `<html>` and `<body>` elements at initialization, instead of temporarily blocking per scroll event via Timer.
+
+### Added
+
+- `OverscrollBehaviorX` enum — type-safe CSS values (`auto`, `none`, `contain`) for the `overscroll-behavior-x` property, exported from the barrel file.
+- `SilkyScrollMousePointerManager.setOverscrollBehaviorX()` — allows manually overriding the `overscroll-behavior-x` CSS property at runtime.
+
+### Changed
+
+- **`blockOverscrollBehaviorX` call timing**: Now invoked only for `PointerDeviceKind.trackpad`, and before the delta threshold check instead of inside it.
+- **Web helper simplified**: Removed `Timer`-based delay/reset logic; `overscroll-behavior-x` is applied once at init and can be changed explicitly via `setOverscrollBehaviorX()`.
+- **Web helper targets both root elements**: `overscroll-behavior-x` is now set on both `<html>` and `<body>` (previously only `<body>`).
+
+### Fixed
+
+- Fixed `_lockedEdgeDirection` not being assigned when entering `BlockedScrollPhysics`, which could cause incorrect edge-lock direction tracking.
+
 ## 2.1.1
 
 ### Changed

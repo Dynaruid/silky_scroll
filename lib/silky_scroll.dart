@@ -15,3 +15,5 @@ export 'src/silky_scroll_config.dart' show SilkyScrollConfig;
 export 'src/silky_scroll_state.dart' show ScrollPhysicsPhase;
 export 'src/scroll_delta_sample.dart' show ScrollDeltaSample;
 export 'src/scroll_delta_sample_analyzer.dart' show ScrollDeltaSampleAnalyzer;
+export 'src/silky_scroll_web_helper/silky_scroll_web_helper_interface.dart'
+    show OverscrollBehaviorX;

@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:silky_scroll/silky_scroll.dart';

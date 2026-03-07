@@ -329,6 +329,7 @@ class SilkyScrollState extends ChangeNotifier
     if (edgeResult != 0 &&
         currentScrollPhysics is! BlockedScrollPhysics &&
         !isOverScrolling) {
+      _lockedEdgeDirection = edgeResult;
       currentScrollPhysics = _blockedPhysics;
       notifyListeners();
 
