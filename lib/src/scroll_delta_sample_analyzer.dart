@@ -67,7 +67,6 @@ abstract final class ScrollDeltaSampleAnalyzer {
     // Then compute inter-window speeds inline.
 
     // Window aggregate accumulators.
-    double prevDeltaSum = 0.0;
     int prevTimeSum = 0;
     int prevCount = 0;
 
@@ -88,7 +87,6 @@ abstract final class ScrollDeltaSampleAnalyzer {
       if (curCount == 0) return;
       if (!firstWindowDone) {
         // Store as previous; no speed to compute yet.
-        prevDeltaSum = curDeltaSum;
         prevTimeSum = curTimeSum;
         prevCount = curCount;
         firstWindowDone = true;
@@ -106,7 +104,6 @@ abstract final class ScrollDeltaSampleAnalyzer {
           }
         }
         // Shift current → previous.
-        prevDeltaSum = curDeltaSum;
         prevTimeSum = curTimeSum;
         prevCount = curCount;
       }

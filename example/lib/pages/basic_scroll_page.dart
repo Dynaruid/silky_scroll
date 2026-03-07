@@ -18,43 +18,51 @@ class BasicScrollPage extends StatefulWidget {
 
 class _BasicScrollPageState extends State<BasicScrollPage> {
   late final ScrollController _controller;
-  double _offset = 0;
-  double _lastDelta = 0;
-  double _edgeOverscrollDelta = 0;
-  PointerDeviceKind? _deviceKind;
+
+  // ValueNotifiers for partial rebuilds — only the listening widget rebuilds.
+  final _offset = ValueNotifier<double>(0);
+  final _lastDelta = ValueNotifier<double>(0);
+  final _edgeOverscrollDelta = ValueNotifier<double>(0);
+  final _deviceKind = ValueNotifier<PointerDeviceKind?>(null);
 
   /// Rolling log of recent scroll events (newest first).
-  final _log = ListQueue<_ScrollEvent>(30);
+  final _log = ValueNotifier<List<_ScrollEvent>>([]);
 
   @override
   void initState() {
     super.initState();
     _controller = ScrollController();
     _controller.addListener(() {
-      setState(() => _offset = _controller.offset);
+      _offset.value = _controller.offset;
     });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _offset.dispose();
+    _lastDelta.dispose();
+    _edgeOverscrollDelta.dispose();
+    _deviceKind.dispose();
+    _log.dispose();
     super.dispose();
   }
 
   void _onScroll(double delta) {
-    setState(() {
-      _lastDelta = delta;
-      _log.addFirst(_ScrollEvent('scroll', delta));
-      if (_log.length > 28) _log.removeLast();
-    });
+    _lastDelta.value = delta;
+    _addLogEntry(_ScrollEvent('scroll', delta));
   }
 
   void _onEdgeOverScroll(double delta) {
-    setState(() {
-      _edgeOverscrollDelta = delta;
-      _log.addFirst(_ScrollEvent('edge', delta));
-      if (_log.length > 28) _log.removeLast();
-    });
+    _edgeOverscrollDelta.value = delta;
+    _addLogEntry(_ScrollEvent('edge', delta));
+  }
+
+  void _addLogEntry(_ScrollEvent event) {
+    final list = List<_ScrollEvent>.of(_log.value);
+    list.insert(0, event);
+    if (list.length > 28) list.removeLast();
+    _log.value = list;
   }
 
   @override
@@ -72,38 +80,48 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
-                  _Indicator(
-                    icon: Icons.straighten,
-                    label: 'offset',
-                    value: _offset.toStringAsFixed(1),
-                    color: cs.primary,
+                  ValueListenableBuilder<double>(
+                    valueListenable: _offset,
+                    builder: (_, v, __) => _Indicator(
+                      icon: Icons.straighten,
+                      label: 'offset',
+                      value: v.toStringAsFixed(1),
+                      color: cs.primary,
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  _Indicator(
-                    icon: Icons.speed,
-                    label: 'delta',
-                    value: _lastDelta.toStringAsFixed(1),
-                    color: cs.secondary,
+                  ValueListenableBuilder<double>(
+                    valueListenable: _lastDelta,
+                    builder: (_, v, __) => _Indicator(
+                      icon: Icons.speed,
+                      label: 'delta',
+                      value: v.toStringAsFixed(1),
+                      color: cs.secondary,
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  _Indicator(
-                    icon: Icons.border_top,
-                    label: 'edge',
-                    value: _edgeOverscrollDelta.toStringAsFixed(1),
-                    color: _edgeOverscrollDelta != 0
-                        ? cs.error
-                        : cs.onSurfaceVariant,
+                  ValueListenableBuilder<double>(
+                    valueListenable: _edgeOverscrollDelta,
+                    builder: (_, v, __) => _Indicator(
+                      icon: Icons.border_top,
+                      label: 'edge',
+                      value: v.toStringAsFixed(1),
+                      color: v != 0 ? cs.error : cs.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  _Indicator(
-                    icon: _deviceKind == PointerDeviceKind.mouse
-                        ? Icons.mouse
-                        : _deviceKind == PointerDeviceKind.touch
-                        ? Icons.touch_app
-                        : Icons.gesture,
-                    label: 'device',
-                    value: _deviceKind?.name ?? '—',
-                    color: cs.tertiary,
+                  ValueListenableBuilder<PointerDeviceKind?>(
+                    valueListenable: _deviceKind,
+                    builder: (_, dk, __) => _Indicator(
+                      icon: dk == PointerDeviceKind.mouse
+                          ? Icons.mouse
+                          : dk == PointerDeviceKind.touch
+                          ? Icons.touch_app
+                          : Icons.gesture,
+                      label: 'device',
+                      value: dk?.name ?? '—',
+                      color: cs.tertiary,
+                    ),
                   ),
                 ],
               ),
@@ -121,9 +139,9 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
               onEdgeOverScroll: _onEdgeOverScroll,
               edgeLockingDelay: Duration(milliseconds: 3000),
               builder: (context, controller, physics, deviceKind) {
-                if (deviceKind != _deviceKind) {
+                if (deviceKind != _deviceKind.value) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() => _deviceKind = deviceKind);
+                    if (mounted) _deviceKind.value = deviceKind;
                   });
                 }
                 return ListView.builder(
@@ -162,8 +180,11 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
             color: cs.surfaceContainerLowest,
             child: SizedBox(
               height: 100,
-              child: _log.isEmpty
-                  ? Center(
+              child: ValueListenableBuilder<List<_ScrollEvent>>(
+                valueListenable: _log,
+                builder: (_, log, __) {
+                  if (log.isEmpty) {
+                    return Center(
                       child: Text(
                         'Scroll to see events…',
                         style: TextStyle(
@@ -171,30 +192,33 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
                           fontSize: 13,
                         ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      itemCount: _log.length,
-                      itemBuilder: (context, i) {
-                        final e = _log.elementAt(i);
-                        final isEdge = e.type == 'edge';
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 1),
-                          child: Text(
-                            '${isEdge ? "⚡" : "→"} ${e.type}  '
-                            'delta: ${e.delta.toStringAsFixed(1)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'monospace',
-                              color: isEdge ? cs.error : cs.onSurfaceVariant,
-                            ),
-                          ),
-                        );
-                      },
+                    );
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
                     ),
+                    itemCount: log.length,
+                    itemBuilder: (context, i) {
+                      final e = log[i];
+                      final isEdge = e.type == 'edge';
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        child: Text(
+                          '${isEdge ? "⚡" : "→"} ${e.type}  '
+                          'delta: ${e.delta.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                            color: isEdge ? cs.error : cs.onSurfaceVariant,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ],
