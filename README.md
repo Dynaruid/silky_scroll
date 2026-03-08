@@ -141,23 +141,23 @@ SilkyScrollGlobalManager.instance
 
 ## Parameters
 
-| Parameter                    | Type                   | Default                          | Description                            |
-| ---------------------------- | ---------------------- | -------------------------------- | -------------------------------------- |
-| `controller`                 | `ScrollController?`    | `null`                           | External scroll controller             |
-| `silkyScrollDuration`        | `Duration`             | `850ms`                          | Scroll animation duration              |
-| `scrollSpeed`                | `double`               | `1`                              | Scroll speed multiplier                |
-| `animationCurve`             | `Curve`                | `Curves.easeOutQuart`            | Animation curve                        |
-| `direction`                  | `Axis`                 | `vertical`                       | Scroll direction                       |
-| `physics`                    | `ScrollPhysics`        | `ScrollPhysics()`                | Scroll physics                         |
-| `edgeLockingDelay`           | `Duration`             | `650ms`                          | Lock delay after reaching edge         |
-| `overScrollingLockingDelay`  | `Duration`             | `700ms`                          | Overscroll lock delay                  |
-| `enableStretchEffect`        | `bool`                 | `true`                           | Overscroll stretch effect              |
-| `edgeForwardingMode`         | `EdgeForwardingMode`   | `EdgeForwardingMode.sameAxisOnly`| Edge delta forwarding to ancestor      |
-| `decayLogFactor`             | `double`               | `12`                             | Smooth-scroll convergence speed        |
-| `setManualPointerDeviceKind` | `Function?`            | `null`                           | Manual pointer device override         |
-| `onScroll`                   | `Function(double)?`    | `null`                           | Scroll event callback                  |
-| `onEdgeOverScroll`           | `Function(double)?`    | `null`                           | Edge overscroll callback               |
-| `debugMode`                  | `bool`                 | `false`                          | Debug logging                          |
+| Parameter                    | Type                 | Default                           | Description                       |
+| ---------------------------- | -------------------- | --------------------------------- | --------------------------------- |
+| `controller`                 | `ScrollController?`  | `null`                            | External scroll controller        |
+| `silkyScrollDuration`        | `Duration`           | `850ms`                           | Scroll animation duration         |
+| `scrollSpeed`                | `double`             | `1`                               | Scroll speed multiplier           |
+| `animationCurve`             | `Curve`              | `Curves.easeOutQuart`             | Animation curve                   |
+| `direction`                  | `Axis`               | `vertical`                        | Scroll direction                  |
+| `physics`                    | `ScrollPhysics`      | `ScrollPhysics()`                 | Scroll physics                    |
+| `edgeLockingDelay`           | `Duration`           | `650ms`                           | Lock delay after reaching edge    |
+| `overScrollingLockingDelay`  | `Duration`           | `700ms`                           | Overscroll lock delay             |
+| `enableStretchEffect`        | `bool`               | `true`                            | Overscroll stretch effect         |
+| `edgeForwardingMode`         | `EdgeForwardingMode` | `EdgeForwardingMode.sameAxisOnly` | Edge delta forwarding to ancestor |
+| `decayLogFactor`             | `double`             | `12`                              | Smooth-scroll convergence speed   |
+| `setManualPointerDeviceKind` | `Function?`          | `null`                            | Manual pointer device override    |
+| `onScroll`                   | `Function(double)?`  | `null`                            | Scroll event callback             |
+| `onEdgeOverScroll`           | `Function(double)?`  | `null`                            | Edge overscroll callback          |
+| `debugMode`                  | `bool`               | `false`                           | Debug logging                     |
 
 ---
 
