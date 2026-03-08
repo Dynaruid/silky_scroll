@@ -117,21 +117,21 @@ SilkyScroll.fromConfig(
 
 On web, `SilkyScroll` automatically sets `overscroll-behavior-x: none` to block browser back/forward swipe gestures.
 
-If you need to restore or change this behavior, use `SilkyScrollMousePointerManager`:
+If you need to restore or change this behavior, use `SilkyScrollGlobalManager`:
 
 ```dart
 import 'package:silky_scroll/silky_scroll.dart';
 
 // Restore browser default (allow swipe navigation)
-SilkyScrollMousePointerManager.instance
+SilkyScrollGlobalManager.instance
     .setOverscrollBehaviorX(OverscrollBehaviorX.auto);
 
 // Block swipe gestures (default)
-SilkyScrollMousePointerManager.instance
+SilkyScrollGlobalManager.instance
     .setOverscrollBehaviorX(OverscrollBehaviorX.none);
 
 // Prevent scroll chaining but keep glow/bounce effect
-SilkyScrollMousePointerManager.instance
+SilkyScrollGlobalManager.instance
     .setOverscrollBehaviorX(OverscrollBehaviorX.contain);
 ```
 
@@ -141,23 +141,23 @@ SilkyScrollMousePointerManager.instance
 
 ## Parameters
 
-| Parameter                    | Type                | Default               | Description                     |
-| ---------------------------- | ------------------- | --------------------- | ------------------------------- |
-| `controller`                 | `ScrollController?` | `null`                | External scroll controller      |
-| `silkyScrollDuration`        | `Duration`          | `700ms`               | Scroll animation duration       |
-| `scrollSpeed`                | `double`            | `1`                   | Scroll speed multiplier         |
-| `animationCurve`             | `Curve`             | `Curves.easeOutQuart` | Animation curve                 |
-| `direction`                  | `Axis`              | `vertical`            | Scroll direction                |
-| `physics`                    | `ScrollPhysics`     | `ScrollPhysics()`     | Scroll physics                  |
-| `edgeLockingDelay`           | `Duration`          | `650ms`               | Lock delay after reaching edge  |
-| `overScrollingLockingDelay`  | `Duration`          | `700ms`               | Overscroll lock delay           |
-| `enableStretchEffect`        | `bool`              | `true`                | Overscroll stretch effect       |
-| `decayLogFactor`             | `double`            | `12`                  | Smooth-scroll convergence speed |
-| `recoilDurationSec`          | `double`            | `0.2`                 | Recoil animation duration (s)   |
-| `setManualPointerDeviceKind` | `Function?`         | `null`                | Manual pointer device override  |
-| `onScroll`                   | `Function(double)?` | `null`                | Scroll event callback           |
-| `onEdgeOverScroll`           | `Function(double)?` | `null`                | Edge overscroll callback        |
-| `debugMode`                  | `bool`              | `false`               | Debug logging                   |
+| Parameter                    | Type                   | Default                          | Description                            |
+| ---------------------------- | ---------------------- | -------------------------------- | -------------------------------------- |
+| `controller`                 | `ScrollController?`    | `null`                           | External scroll controller             |
+| `silkyScrollDuration`        | `Duration`             | `850ms`                          | Scroll animation duration              |
+| `scrollSpeed`                | `double`               | `1`                              | Scroll speed multiplier                |
+| `animationCurve`             | `Curve`                | `Curves.easeOutQuart`            | Animation curve                        |
+| `direction`                  | `Axis`                 | `vertical`                       | Scroll direction                       |
+| `physics`                    | `ScrollPhysics`        | `ScrollPhysics()`                | Scroll physics                         |
+| `edgeLockingDelay`           | `Duration`             | `650ms`                          | Lock delay after reaching edge         |
+| `overScrollingLockingDelay`  | `Duration`             | `700ms`                          | Overscroll lock delay                  |
+| `enableStretchEffect`        | `bool`                 | `true`                           | Overscroll stretch effect              |
+| `edgeForwardingMode`         | `EdgeForwardingMode`   | `EdgeForwardingMode.sameAxisOnly`| Edge delta forwarding to ancestor      |
+| `decayLogFactor`             | `double`               | `12`                             | Smooth-scroll convergence speed        |
+| `setManualPointerDeviceKind` | `Function?`            | `null`                           | Manual pointer device override         |
+| `onScroll`                   | `Function(double)?`    | `null`                           | Scroll event callback                  |
+| `onEdgeOverScroll`           | `Function(double)?`    | `null`                           | Edge overscroll callback               |
+| `debugMode`                  | `bool`                 | `false`                          | Debug logging                          |
 
 ---
 

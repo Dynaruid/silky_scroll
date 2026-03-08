@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'silky_scroll_animator.dart';
 import 'silky_scroll_config.dart';
-import 'silky_scroll_mouse_pointer_manager.dart';
+import 'silky_scroll_global_manager.dart';
 import 'silky_scroll_state.dart';
 
 /// A widget that provides smooth, animated scrolling on all platforms.
@@ -32,8 +32,8 @@ class SilkyScroll extends StatefulWidget {
     this.edgeLockingDelay = const Duration(milliseconds: 650),
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
+    this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
-    this.recoilDurationSec = kDefaultRecoilDurationSec,
     this.debugMode = false,
     this.setManualPointerDeviceKind,
     this.onScroll,
@@ -61,8 +61,8 @@ class SilkyScroll extends StatefulWidget {
        edgeLockingDelay = config.edgeLockingDelay,
        overScrollingLockingDelay = config.overScrollingLockingDelay,
        enableStretchEffect = config.enableStretchEffect,
+       edgeForwardingMode = config.edgeForwardingMode,
        decayLogFactor = config.decayLogFactor,
-       recoilDurationSec = config.recoilDurationSec,
        debugMode = config.debugMode;
 
   /// An optional external [ScrollController].
@@ -112,15 +112,22 @@ class SilkyScroll extends StatefulWidget {
   /// Defaults to [kDefaultDecayLogFactor] (12).
   final double decayLogFactor;
 
-  /// Duration of the recoil (bounce-back) animation in seconds.
-  ///
-  /// Defaults to [kDefaultRecoilDurationSec] (0.2).
-  final double recoilDurationSec;
-
   /// Whether to allow the platform stretch / glow overscroll effect.
   ///
   /// Defaults to `true`.
   final bool enableStretchEffect;
+
+  /// Controls how edge-locked scroll deltas are forwarded to
+  /// ancestor [Scrollable] widgets.
+  ///
+  /// Defaults to [EdgeForwardingMode.sameAxisOnly], which forwards
+  /// outward scroll deltas at edges only when the ancestor scrollable
+  /// shares the same axis direction.
+  ///
+  /// Use [EdgeForwardingMode.always] to forward regardless of axis
+  /// direction, or [EdgeForwardingMode.none] to disable forwarding
+  /// entirely.
+  final EdgeForwardingMode edgeForwardingMode;
 
   /// Called on every scroll delta (both mouse and touch).
   final void Function(double delta)? onScroll;
@@ -141,14 +148,14 @@ class SilkyScroll extends StatefulWidget {
 class _SilkyScrollState extends State<SilkyScroll>
     with TickerProviderStateMixin {
   late final SilkyScrollState silkyScrollState;
-  late final SilkyScrollMousePointerManager silkyScrollMousePointerManager;
+  late final SilkyScrollGlobalManager silkyScrollGlobalManager;
   late ScrollPhysics currentPhysics;
   bool _lastBlocked = false;
   PointerDeviceKind? _currentDeviceKind;
   @override
   void initState() {
     super.initState();
-    silkyScrollMousePointerManager = SilkyScrollMousePointerManager.instance;
+    silkyScrollGlobalManager = SilkyScrollGlobalManager.instance;
     silkyScrollState = SilkyScrollState(
       scrollController: widget.controller,
       widgetScrollPhysics: widget.physics,
@@ -158,9 +165,9 @@ class _SilkyScrollState extends State<SilkyScroll>
       scrollSpeed: widget.scrollSpeed,
       setManualPointerDeviceKind: widget.setManualPointerDeviceKind,
       isVertical: widget.direction == Axis.vertical,
+      edgeForwardingMode: widget.edgeForwardingMode,
       decayLogFactor: widget.decayLogFactor,
-      recoilDurationSec: widget.recoilDurationSec,
-      silkyScrollMousePointerManager: silkyScrollMousePointerManager,
+      silkyScrollGlobalManager: silkyScrollGlobalManager,
       onScroll: widget.onScroll,
       onEdgeOverScroll: widget.onEdgeOverScroll,
       debugMode: widget.debugMode,
@@ -209,7 +216,7 @@ class _SilkyScrollState extends State<SilkyScroll>
   bool _handleTrackpadCheck(PointerDeviceKind kind) {
     if (kind == PointerDeviceKind.trackpad) {
       silkyScrollState.setPointerDeviceKind(PointerDeviceKind.trackpad);
-      silkyScrollMousePointerManager.markTrackpadHeuristic();
+      silkyScrollGlobalManager.markTrackpadHeuristic();
       _updateDeviceKind(PointerDeviceKind.trackpad);
       return true;
     } else {
@@ -261,7 +268,7 @@ class _SilkyScrollState extends State<SilkyScroll>
     //   On native, this branch is guarded by _panZoomTimer (_kPanZoomTimeoutMs),
     //   which is short enough that a real mouse event within that
     //   window is extremely unlikely.
-    if (silkyScrollMousePointerManager.isRecentlyTrackpad) {
+    if (silkyScrollGlobalManager.isRecentlyTrackpad) {
       _updateDeviceKind(PointerDeviceKind.trackpad);
       silkyScrollState.triggerTouchAction(
         signalEvent.scrollDelta,
@@ -285,10 +292,10 @@ class _SilkyScrollState extends State<SilkyScroll>
     silkyScrollState.widgetContext = context;
     return MouseRegion(
       onEnter: (e) {
-        silkyScrollMousePointerManager.enteredKey(silkyScrollState.instanceKey);
+        silkyScrollGlobalManager.enteredKey(silkyScrollState.instanceKey);
       },
       onExit: (e) {
-        silkyScrollMousePointerManager.exitKey(silkyScrollState.instanceKey);
+        silkyScrollGlobalManager.exitKey(silkyScrollState.instanceKey);
       },
       opaque: false,
       child: NotificationListener<OverscrollIndicatorNotification>(
@@ -326,7 +333,7 @@ class _SilkyScrollState extends State<SilkyScroll>
           onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
             _updateDeviceKind(PointerDeviceKind.trackpad);
             silkyScrollState.setPointerDeviceKind(PointerDeviceKind.trackpad);
-            silkyScrollMousePointerManager.markPanZoomActivity();
+            silkyScrollGlobalManager.markPanZoomActivity();
             silkyScrollState.cancelSilkyScroll();
 
             silkyScrollState.triggerTouchAction(
@@ -335,7 +342,7 @@ class _SilkyScrollState extends State<SilkyScroll>
             );
           },
           onPointerPanZoomEnd: (PointerPanZoomEndEvent event) {
-            silkyScrollMousePointerManager.clearPanZoomMemory();
+            silkyScrollGlobalManager.clearPanZoomMemory();
           },
           onPointerUp: (PointerUpEvent event) {
             if (event.kind == PointerDeviceKind.touch) {

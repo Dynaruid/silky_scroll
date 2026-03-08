@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import 'silky_scroll_animator.dart';
 
+/// Controls how edge-locked scroll deltas are forwarded to ancestor
+/// [Scrollable] widgets.
+enum EdgeForwardingMode {
+  /// Never forward scroll deltas to ancestor scrollables at edges.
+  none,
+
+  /// Forward only when the ancestor scrollable's axis direction matches
+  /// this scrollable's axis direction.
+  sameAxisOnly,
+
+  /// Always forward scroll deltas to the nearest ancestor scrollable,
+  /// regardless of axis direction.
+  always,
+}
+
 /// Configuration data class that groups [SilkyScroll] scroll-behavior
 /// parameters into a single object.
 ///
@@ -22,7 +37,7 @@ import 'silky_scroll_animator.dart';
 @immutable
 final class SilkyScrollConfig {
   const SilkyScrollConfig({
-    this.silkyScrollDuration = const Duration(milliseconds: 700),
+    this.silkyScrollDuration = const Duration(milliseconds: 850),
     this.scrollSpeed = 1,
     this.animationCurve = Curves.easeOutQuart,
     this.direction = Axis.vertical,
@@ -30,8 +45,8 @@ final class SilkyScrollConfig {
     this.edgeLockingDelay = const Duration(milliseconds: 650),
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
+    this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
-    this.recoilDurationSec = kDefaultRecoilDurationSec,
     this.debugMode = false,
   });
 
@@ -53,11 +68,20 @@ final class SilkyScrollConfig {
   /// Whether to allow the platform stretch / glow overscroll effect.
   final bool enableStretchEffect;
 
+  /// Controls how edge-locked scroll deltas are forwarded to
+  /// ancestor [Scrollable] widgets.
+  ///
+  /// Defaults to [EdgeForwardingMode.sameAxisOnly], which forwards
+  /// outward scroll deltas at edges only when the ancestor scrollable
+  /// shares the same axis direction.
+  ///
+  /// Use [EdgeForwardingMode.always] to forward regardless of axis
+  /// direction, or [EdgeForwardingMode.none] to disable forwarding
+  /// entirely.
+  final EdgeForwardingMode edgeForwardingMode;
+
   /// Exponential-decay log factor for the smooth-scroll animation.
   final double decayLogFactor;
-
-  /// Duration of the recoil (bounce-back) animation in seconds.
-  final double recoilDurationSec;
 
   /// Enables debug logging.
   final bool debugMode;
@@ -78,8 +102,8 @@ final class SilkyScrollConfig {
     Duration? edgeLockingDelay,
     Duration? overScrollingLockingDelay,
     bool? enableStretchEffect,
+    EdgeForwardingMode? edgeForwardingMode,
     double? decayLogFactor,
-    double? recoilDurationSec,
     bool? debugMode,
   }) {
     return SilkyScrollConfig(
@@ -92,8 +116,8 @@ final class SilkyScrollConfig {
       overScrollingLockingDelay:
           overScrollingLockingDelay ?? this.overScrollingLockingDelay,
       enableStretchEffect: enableStretchEffect ?? this.enableStretchEffect,
+      edgeForwardingMode: edgeForwardingMode ?? this.edgeForwardingMode,
       decayLogFactor: decayLogFactor ?? this.decayLogFactor,
-      recoilDurationSec: recoilDurationSec ?? this.recoilDurationSec,
       debugMode: debugMode ?? this.debugMode,
     );
   }
@@ -111,8 +135,8 @@ final class SilkyScrollConfig {
           edgeLockingDelay == other.edgeLockingDelay &&
           overScrollingLockingDelay == other.overScrollingLockingDelay &&
           enableStretchEffect == other.enableStretchEffect &&
+          edgeForwardingMode == other.edgeForwardingMode &&
           decayLogFactor == other.decayLogFactor &&
-          recoilDurationSec == other.recoilDurationSec &&
           debugMode == other.debugMode;
 
   @override
@@ -125,8 +149,8 @@ final class SilkyScrollConfig {
     edgeLockingDelay,
     overScrollingLockingDelay,
     enableStretchEffect,
+    edgeForwardingMode,
     decayLogFactor,
-    recoilDurationSec,
     debugMode,
   );
 
@@ -139,7 +163,7 @@ final class SilkyScrollConfig {
       'direction: $direction, '
       'edgeLockingDelay: $edgeLockingDelay, '
       'enableStretchEffect: $enableStretchEffect, '
+      'edgeForwardingMode: $edgeForwardingMode, '
       'decayLogFactor: $decayLogFactor, '
-      'recoilDurationSec: $recoilDurationSec, '
       'debugMode: $debugMode)';
 }

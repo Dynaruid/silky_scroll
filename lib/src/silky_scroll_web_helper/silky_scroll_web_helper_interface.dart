@@ -25,7 +25,7 @@ abstract interface class SilkyScrollWebManagerInterface {
 
   /// Applies `overscroll-behavior-x: none` once during initialisation.
   ///
-  /// Called automatically by [SilkyScrollMousePointerManager]; users
+  /// Called automatically by [SilkyScrollGlobalManager]; users
   /// do not need to call this.
   void blockOverscrollBehaviorXHtml();
 

@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:silky_scroll/src/silky_scroll_mouse_pointer_manager.dart';
+import 'package:silky_scroll/src/silky_scroll_global_manager.dart';
 
 void main() {
-  group('SilkyScrollMousePointerManager', () {
-    late SilkyScrollMousePointerManager manager;
+  group('SilkyScrollGlobalManager', () {
+    late SilkyScrollGlobalManager manager;
 
     setUp(() {
-      // SilkyScrollMousePointerManager is a singleton; reset its state.
-      manager = SilkyScrollMousePointerManager.instance;
+      // SilkyScrollGlobalManager is a singleton; reset its state.
+      manager = SilkyScrollGlobalManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });

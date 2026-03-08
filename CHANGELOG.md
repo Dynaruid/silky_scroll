@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.4.0
+
+### Breaking
+
+- **Removed `recoilDurationSec`**: The `recoilDurationSec` parameter and `kDefaultRecoilDurationSec` constant have been removed. Bounce-back animations are now delegated to Flutter's native `BouncingScrollPhysics` ballistic simulation.
+- **Removed `SilkyEdgeDetector`**: Edge detection logic has been inlined into `SilkyScrollState`.
+- **Removed `SilkyScrollMousePointerManager`**: Fully replaced by `SilkyScrollGlobalManager`.
+- **`handleTouchScroll` split**: `handleTouchScroll` has been split into `handleTrackpadScroll` and `handleTouchDragScroll` for separate handling of trackpad and touch drag inputs.
+- **`silkyScrollDuration` default changed**: From `700ms` to `850ms`.
+
+### Added
+
+- **`EdgeForwardingMode` enum**: New enum (`none`, `sameAxisOnly`, `always`) controlling how edge-locked scroll deltas are forwarded to ancestor scrollables. Exported from barrel file.
+- **`edgeForwardingMode` parameter**: Added to `SilkyScrollConfig` and `SilkyScroll` widget (default: `EdgeForwardingMode.sameAxisOnly`).
+- **Native bounce delegation**: `triggerNativeBounce()` delegates overscroll bounce-back to Flutter's native `BouncingScrollPhysics` via `goBallistic(0.0)`, replacing the custom recoil animation.
+- **Ancestor scrollable detection**: Edge-locking is now skipped on BouncingScrollPhysics platforms when there is no ancestor scrollable to forward to, allowing native bounce to play normally.
+
+### Changed
+
+- **Recoil animation replaced**: Custom recoil ticker logic removed; overscroll recovery now uses Flutter's native ballistic simulation.
+- **Edge-locking on BouncingScrollPhysics**: Physics are no longer blocked during edge-lock on iOS/macOS to preserve native bounce-back animation. Physics are only blocked dynamically when an outward delta arrives for forwarding.
+- **Improved gesture unlock**: `_tryGestureUnlock` now requires `currentInputSpeed > 2` before recognizing an inward direction change.
+- **Ancestor forwarding axis check**: When `edgeForwardingMode == sameAxisOnly`, forwarding only occurs when the ancestor shares the same scroll axis.
+- Renamed internal `currentScrollSpeed` → `currentInputSpeed`, `_recentDeltaSamples` → `_recentInputDeltaSamples` for clarity.
+
+### Removed
+
+- `recoilDurationSec` parameter and `kDefaultRecoilDurationSec` constant.
+- `SilkyEdgeDetector` class and its test file.
+- `SilkyScrollMousePointerManager` class and its test file.
+- `isRecoilScroll` state field, `onAnimationStateChanged()` delegate callback, and all recoil ticker logic from `SilkyScrollAnimator`.
+
 ## 2.3.0
 
 ### Added
@@ -17,7 +49,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Removed stray `print` call in `SilkyScrollMousePointerManager.setOverscrollBehaviorX()`.
+- Removed stray `print` call in `SilkyScrollGlobalManager.setOverscrollBehaviorX()`.
 - Renamed local variable `_flushWindow` → `flushWindow` in `ScrollDeltaSampleAnalyzer` to satisfy `no_leading_underscores_for_local_identifiers` lint.
 
 ## 2.2.1
@@ -30,13 +62,13 @@ All notable changes to this project will be documented in this file.
 
 ### Breaking
 
-- **`SilkyScrollMousePointerManager` access changed**: Replaced factory constructor with `SilkyScrollMousePointerManager.instance` static field for explicit singleton semantics.
+- **`SilkyScrollGlobalManager` access changed**: Replaced factory constructor with `SilkyScrollGlobalManager.instance` static field for explicit singleton semantics.
 - **`overscroll-behavior-x` default behavior changed**: Now permanently set to `none` on both `<html>` and `<body>` elements at initialization, instead of temporarily blocking per scroll event via Timer.
 
 ### Added
 
 - `OverscrollBehaviorX` enum — type-safe CSS values (`auto`, `none`, `contain`) for the `overscroll-behavior-x` property, exported from the barrel file.
-- `SilkyScrollMousePointerManager.setOverscrollBehaviorX()` — allows manually overriding the `overscroll-behavior-x` CSS property at runtime.
+- `SilkyScrollGlobalManager.setOverscrollBehaviorX()` — allows manually overriding the `overscroll-behavior-x` CSS property at runtime.
 
 ### Changed
 
@@ -120,7 +152,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - `SilkyScrollConfig.copyWith`, `==`, `hashCode`, and `toString`.
-- `SilkyScrollMousePointerManager.resetForTesting` (`@visibleForTesting`).
+- `SilkyScrollGlobalManager.resetForTesting` (`@visibleForTesting`).
 - `SilkyScrollWebManagerInterface.isWebPlatform` for conditional-import–based platform detection.
 - `SilkyEdgeDetector`: sub-pixel edge detection using threshold instead of `toInt()`.
 - State machine `_transitionTo` now guards against Timer creation after dispose.

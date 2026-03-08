@@ -53,69 +53,63 @@ class _NestedScrollPageState extends State<NestedScrollPage> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // ── Info banner ────────────────────────────────────────────────
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            color: cs.surfaceContainerLow,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                if (_outerEdgeDelta != 0)
-                  Chip(
-                    avatar: Icon(Icons.bolt, size: 16, color: cs.error),
-                    label: Text(
-                      'edge: ${_outerEdgeDelta.toStringAsFixed(0)}',
-                      style: TextStyle(fontSize: 11, color: cs.error),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                  ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1),
-
           // ── Outer scrollable ──────────────────────────────────────────
-          Expanded(
-            child: SilkyScroll(
-              key: ValueKey('outer_$_stretch'),
-              physics: const BouncingScrollPhysics(),
-              enableStretchEffect: _stretch,
-              onEdgeOverScroll: (delta) {
-                setState(() => _outerEdgeDelta = delta);
-                Future.delayed(const Duration(milliseconds: 600), () {
-                  if (mounted) setState(() => _outerEdgeDelta = 0);
+          SilkyScroll(
+            key: ValueKey('outer_$_stretch'),
+            physics: const BouncingScrollPhysics(),
+            enableStretchEffect: _stretch,
+            onEdgeOverScroll: (delta) {
+              setState(() => _outerEdgeDelta = delta);
+              Future.delayed(const Duration(milliseconds: 600), () {
+                if (mounted) setState(() => _outerEdgeDelta = 0);
+              });
+            },
+            builder: (context, controller, physics, deviceKind) {
+              if (deviceKind != _deviceKind) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) setState(() => _deviceKind = deviceKind);
                 });
-              },
-              builder: (context, controller, physics, deviceKind) {
-                if (deviceKind != _deviceKind) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) setState(() => _deviceKind = deviceKind);
-                  });
-                }
-                return ListView.builder(
-                  controller: controller,
-                  physics: physics,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: 20,
-                  itemBuilder: (context, index) {
-                    // Every 3rd item is a nested-scroll card
-                    if (index % 3 == 1) {
-                      return _NestedCard(
-                        index: index,
-                        stretch: _stretch,
-                        debugMode: index == 4,
-                      );
-                    }
-                    return _SimpleCard(index: index);
-                  },
-                );
-              },
-            ),
+              }
+              return ListView.builder(
+                controller: controller,
+                physics: physics,
+                padding: const EdgeInsets.all(16),
+                itemCount: 20,
+                itemBuilder: (context, index) {
+                  // Every 3rd item is a nested-scroll card
+                  if (index % 3 == 1) {
+                    return _NestedCard(
+                      index: index,
+                      stretch: _stretch,
+                      debugMode: index == 4,
+                      physics: index == 4
+                          ? const BouncingScrollPhysics()
+                          : const ClampingScrollPhysics(),
+                    );
+                  }
+                  return _SimpleCard(index: index);
+                },
+              );
+            },
           ),
+
+          // ── Edge delta overlay chip ────────────────────────────────────
+          if (_outerEdgeDelta != 0)
+            Positioned(
+              top: 12,
+              left: 16,
+              child: Chip(
+                avatar: Icon(Icons.bolt, size: 16, color: cs.error),
+                label: Text(
+                  'edge: ${_outerEdgeDelta.toStringAsFixed(0)}',
+                  style: TextStyle(fontSize: 11, color: cs.error),
+                ),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+              ),
+            ),
         ],
       ),
     );
@@ -153,11 +147,13 @@ class _NestedCard extends StatefulWidget {
     required this.index,
     required this.stretch,
     this.debugMode = false,
+    this.physics = const ClampingScrollPhysics(),
   });
 
   final int index;
   final bool stretch;
   final bool debugMode;
+  final ScrollPhysics physics;
 
   @override
   State<_NestedCard> createState() => _NestedCardState();
@@ -222,7 +218,7 @@ class _NestedCardState extends State<_NestedCard> {
             height: 220,
             child: SilkyScroll(
               key: ValueKey('inner_${widget.index}_${widget.stretch}'),
-              physics: const ClampingScrollPhysics(),
+              physics: widget.physics,
               enableStretchEffect: widget.stretch,
               debugMode: widget.debugMode,
               onEdgeOverScroll: (delta) {

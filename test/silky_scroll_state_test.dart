@@ -3,7 +3,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silky_scroll/src/blocked_scroll_physics.dart';
 import 'package:silky_scroll/src/silky_scroll_state.dart';
-import 'package:silky_scroll/src/silky_scroll_mouse_pointer_manager.dart';
+import 'package:silky_scroll/src/silky_scroll_config.dart';
+import 'package:silky_scroll/src/silky_scroll_global_manager.dart';
 
 /// Minimal [TickerProvider] for tests.
 class _TestVSync implements TickerProvider {
@@ -34,12 +35,13 @@ SilkyScrollState _createState({
   Duration silkyScrollDuration = const Duration(milliseconds: 700),
   Curve animationCurve = Curves.easeOutQuart,
   bool isVertical = true,
+  EdgeForwardingMode edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
   bool debugMode = false,
-  SilkyScrollMousePointerManager? manager,
+  SilkyScrollGlobalManager? manager,
   TickerProvider? vsync,
   int Function()? clock,
 }) {
-  manager ??= SilkyScrollMousePointerManager.instance;
+  manager ??= SilkyScrollGlobalManager.instance;
   return SilkyScrollState(
     scrollController: scrollController,
     widgetScrollPhysics: physics,
@@ -48,9 +50,10 @@ SilkyScrollState _createState({
     silkyScrollDuration: silkyScrollDuration,
     animationCurve: animationCurve,
     isVertical: isVertical,
+    edgeForwardingMode: edgeForwardingMode,
     debugMode: debugMode,
     setManualPointerDeviceKind: null,
-    silkyScrollMousePointerManager: manager,
+    silkyScrollGlobalManager: manager,
     vsync: vsync ?? _TestVSync(),
     clock: clock,
   );
@@ -59,10 +62,10 @@ SilkyScrollState _createState({
 void main() {
   group('SilkyScrollState — ScrollPhysicsPhase transitions', () {
     late SilkyScrollState state;
-    late SilkyScrollMousePointerManager manager;
+    late SilkyScrollGlobalManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager.instance;
+      manager = SilkyScrollGlobalManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });
@@ -80,7 +83,7 @@ void main() {
       expect(state.isOverscrollLocked, isFalse);
     });
 
-    testWidgets('handleTouchScroll transitions to edgeCheckPending', (
+    testWidgets('handleTrackpadScroll transitions to edgeCheckPending', (
       tester,
     ) async {
       state = _createState(manager: manager);
@@ -88,7 +91,7 @@ void main() {
         _buildScrollable(controller: state.clientController),
       );
 
-      state.handleTouchScroll(10.0);
+      state.handleTrackpadScroll(10.0);
       expect(state.physicsPhase, ScrollPhysicsPhase.edgeCheckPending);
 
       // Dispose within test body to cancel pending timer.
@@ -96,7 +99,7 @@ void main() {
     });
 
     testWidgets(
-      'handleTouchScroll at edge transitions to edgeLocked after delay',
+      'handleTrackpadScroll at edge transitions to edgeLocked after delay',
       (tester) async {
         int fakeTime = 1000;
         state = _createState(
@@ -109,9 +112,9 @@ void main() {
         );
 
         // At top edge, scrolling up (negative delta)
-        state.handleTouchScroll(-10.0);
+        state.handleTrackpadScroll(-10.0);
         fakeTime += 50;
-        state.handleTouchScroll(-10.0);
+        state.handleTrackpadScroll(-10.0);
         expect(state.physicsPhase, ScrollPhysicsPhase.edgeCheckPending);
 
         // Wait for the 80ms edge check delay
@@ -138,9 +141,9 @@ void main() {
       );
 
       // Trigger edge lock at top
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
       await tester.pump(const Duration(milliseconds: 100));
       expect(state.isEdgeLocked, isTrue);
 
@@ -151,7 +154,7 @@ void main() {
     });
 
     testWidgets(
-      'continued touch scroll during edgeLocked does not cancel unlock timer',
+      'continued trackpad scroll during edgeLocked does not cancel unlock timer',
       (tester) async {
         int fakeTime = 1000;
         state = _createState(
@@ -164,18 +167,18 @@ void main() {
         );
 
         // Trigger edge lock at top
-        state.handleTouchScroll(-10.0);
+        state.handleTrackpadScroll(-10.0);
         fakeTime += 50;
-        state.handleTouchScroll(-10.0);
+        state.handleTrackpadScroll(-10.0);
         await tester.pump(const Duration(milliseconds: 100));
         expect(state.isEdgeLocked, isTrue);
 
-        // Simulate continued touch scrolling while locked — this previously
+        // Simulate continued trackpad scrolling while locked — this previously
         // cancelled the unlock timer, leaving physics permanently blocked.
-        state.handleTouchScroll(-5.0);
-        state.handleTouchScroll(-8.0);
+        state.handleTrackpadScroll(-5.0);
+        state.handleTrackpadScroll(-8.0);
         await tester.pump(const Duration(milliseconds: 50));
-        state.handleTouchScroll(-3.0);
+        state.handleTrackpadScroll(-3.0);
 
         // Phase should still be edgeLocked, not edgeCheckPending
         expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
@@ -190,7 +193,7 @@ void main() {
     );
 
     testWidgets(
-      'continued touch scroll during overscrollLocked does not cancel timer',
+      'continued trackpad scroll during overscrollLocked does not cancel timer',
       (tester) async {
         state = _createState(manager: manager);
         await tester.pumpWidget(
@@ -201,9 +204,9 @@ void main() {
         state.beginOverscrollLock(const Duration(milliseconds: 200));
         expect(state.isOverscrollLocked, isTrue);
 
-        // Simulate touch scrolling during overscroll lock
-        state.handleTouchScroll(5.0);
-        state.handleTouchScroll(3.0);
+        // Simulate trackpad scrolling during overscroll lock
+        state.handleTrackpadScroll(5.0);
+        state.handleTrackpadScroll(3.0);
 
         // Should remain overscrollLocked
         expect(state.physicsPhase, ScrollPhysicsPhase.overscrollLocked);
@@ -257,7 +260,7 @@ void main() {
       );
 
       // Force into a non-normal state
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
       expect(state.physicsPhase, isNot(ScrollPhysicsPhase.normal));
 
       state.setWidgetScrollPhysics(
@@ -269,10 +272,10 @@ void main() {
 
   group('SilkyScrollState — touch-aware edge locking', () {
     late SilkyScrollState state;
-    late SilkyScrollMousePointerManager manager;
+    late SilkyScrollGlobalManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager.instance;
+      manager = SilkyScrollGlobalManager.instance;
       manager.keyStack.clear();
       manager.reserveKey = null;
     });
@@ -283,30 +286,31 @@ void main() {
       }
     });
 
-    testWidgets('handleTouchScroll during active touch does not lock at edge', (
-      tester,
-    ) async {
-      state = _createState(
-        manager: manager,
-        edgeLockingDelay: const Duration(milliseconds: 200),
-      );
-      await tester.pumpWidget(
-        _buildScrollable(controller: state.clientController),
-      );
+    testWidgets(
+      'handleTouchDragScroll during active touch does not lock at edge',
+      (tester) async {
+        state = _createState(
+          manager: manager,
+          edgeLockingDelay: const Duration(milliseconds: 200),
+        );
+        await tester.pumpWidget(
+          _buildScrollable(controller: state.clientController),
+        );
 
-      // Simulate finger down
-      state.onTouchDown();
+        // Simulate finger down
+        state.onTouchDown();
 
-      // Scroll up at top edge — should NOT lock
-      state.handleTouchScroll(-10.0);
-      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+        // Scroll up at top edge — should NOT lock
+        state.handleTouchDragScroll(-10.0);
+        expect(state.physicsPhase, ScrollPhysicsPhase.normal);
 
-      await tester.pump(const Duration(milliseconds: 100));
-      // Should still be normal — no timer was started
-      expect(state.physicsPhase, ScrollPhysicsPhase.normal);
+        await tester.pump(const Duration(milliseconds: 100));
+        // Should still be normal — no timer was started
+        expect(state.physicsPhase, ScrollPhysicsPhase.normal);
 
-      state.dispose();
-    });
+        state.dispose();
+      },
+    );
 
     testWidgets('onEdgeOverScroll fires during active touch at edge', (
       tester,
@@ -322,10 +326,11 @@ void main() {
         silkyScrollDuration: const Duration(milliseconds: 700),
         animationCurve: Curves.easeOutQuart,
         isVertical: true,
+        edgeForwardingMode: EdgeForwardingMode.sameAxisOnly,
         debugMode: false,
         onEdgeOverScroll: edgeDeltas.add,
         setManualPointerDeviceKind: null,
-        silkyScrollMousePointerManager: manager,
+        silkyScrollGlobalManager: manager,
         vsync: _TestVSync(),
       );
       await tester.pumpWidget(
@@ -333,7 +338,7 @@ void main() {
       );
 
       state.onTouchDown();
-      state.handleTouchScroll(-10.0); // top edge, scroll up
+      state.handleTouchDragScroll(-10.0); // top edge, scroll up
       expect(edgeDeltas, [-10.0]);
 
       state.dispose();
@@ -354,9 +359,9 @@ void main() {
 
       // Simulate touch scroll at top edge then lift
       state.onTouchDown();
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       expect(state.physicsPhase, ScrollPhysicsPhase.normal);
 
       state.onTouchUp();
@@ -378,7 +383,7 @@ void main() {
       await tester.pump();
 
       state.onTouchDown();
-      state.handleTouchScroll(10.0);
+      state.handleTouchDragScroll(10.0);
       state.onTouchUp();
 
       expect(state.physicsPhase, ScrollPhysicsPhase.normal);
@@ -398,9 +403,9 @@ void main() {
 
       // Lock at top edge via touch-up
       state.onTouchDown();
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       state.onTouchUp();
       expect(state.isEdgeLocked, isTrue);
       expect(state.isScrollBlocked, isTrue);
@@ -425,9 +430,9 @@ void main() {
 
       // Lock at top edge via touch-up
       state.onTouchDown();
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       state.onTouchUp();
       expect(state.isEdgeLocked, isTrue);
 
@@ -452,9 +457,9 @@ void main() {
       );
 
       state.onTouchDown();
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       state.onTouchUp();
       expect(state.isEdgeLocked, isTrue);
 
@@ -478,9 +483,9 @@ void main() {
 
       // Lock at top edge
       state.onTouchDown();
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       state.onTouchUp();
       expect(state.isEdgeLocked, isTrue);
 
@@ -505,9 +510,9 @@ void main() {
       );
 
       state.onTouchDown();
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTouchDragScroll(-10.0);
 
       // Simulate overscroll lock (from widget's onPointerUp)
       state.isOverScrolling = true;
@@ -535,9 +540,9 @@ void main() {
       );
 
       // Simulate trackpad scroll at top edge (no touch down/up for trackpad)
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
 
       // Let edge-check timer fire → edgeLocked
       await tester.pump(const Duration(milliseconds: 60));
@@ -548,7 +553,7 @@ void main() {
 
       // Single inward (positive) delta should unlock immediately
       fakeTime += 20;
-      state.handleTouchScroll(5.0);
+      state.handleTrackpadScroll(5.0);
       expect(state.isEdgeLocked, isFalse);
       expect(state.isScrollBlocked, isFalse);
       // After unlock, trackpad re-enters edgeCheckPending (normal flow).
@@ -569,15 +574,15 @@ void main() {
       );
 
       // Lock at top edge
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
       fakeTime += 50;
-      state.handleTouchScroll(-10.0);
+      state.handleTrackpadScroll(-10.0);
       await tester.pump(const Duration(milliseconds: 60));
       expect(state.isEdgeLocked, isTrue);
 
       // Continued outward (negative) delta should NOT unlock
       fakeTime += 20;
-      state.handleTouchScroll(-3.0);
+      state.handleTrackpadScroll(-3.0);
       expect(state.isEdgeLocked, isTrue);
       // Trackpad edge-lock does NOT block physics.
       expect(state.isScrollBlocked, isFalse);
@@ -600,7 +605,7 @@ void main() {
         _buildScrollable(controller: state.clientController),
       );
 
-      state.handleTouchScroll(10.0);
+      state.handleTrackpadScroll(10.0);
       expect(state.physicsPhase, ScrollPhysicsPhase.edgeCheckPending);
 
       state.dispose();
@@ -688,99 +693,12 @@ void main() {
     });
   });
 
-  group('SilkyScrollState — recoil physics blocking', () {
-    late SilkyScrollState state;
-    late SilkyScrollMousePointerManager manager;
-
-    setUp(() {
-      manager = SilkyScrollMousePointerManager.instance;
-      manager.keyStack.clear();
-      manager.reserveKey = null;
-    });
-
-    tearDown(() {
-      if (!state.isDisposed) {
-        state.dispose();
-      }
-    });
-
-    testWidgets('onAnimationStateChanged blocks physics during recoil', (
-      tester,
-    ) async {
-      state = _createState(
-        manager: manager,
-        physics: const BouncingScrollPhysics(),
-      );
-      await tester.pumpWidget(
-        _buildScrollable(controller: state.clientController),
-      );
-
-      // Simulate recoil start
-      state.isRecoilScroll = true;
-      state.onAnimationStateChanged();
-
-      expect(state.isScrollBlocked, isTrue);
-    });
-
-    testWidgets('onAnimationStateChanged restores physics when recoil ends', (
-      tester,
-    ) async {
-      state = _createState(
-        manager: manager,
-        physics: const BouncingScrollPhysics(),
-      );
-      await tester.pumpWidget(
-        _buildScrollable(controller: state.clientController),
-      );
-
-      // Start and end recoil
-      state.isRecoilScroll = true;
-      state.onAnimationStateChanged();
-      expect(state.isScrollBlocked, isTrue);
-
-      state.isRecoilScroll = false;
-      state.onAnimationStateChanged();
-      expect(state.isScrollBlocked, isFalse);
-    });
-
-    testWidgets(
-      'onAnimationStateChanged preserves edge lock after recoil ends',
-      (tester) async {
-        int fakeTime = 1000;
-        state = _createState(
-          manager: manager,
-          edgeLockingDelay: const Duration(milliseconds: 500),
-          clock: () => fakeTime,
-        );
-        await tester.pumpWidget(
-          _buildScrollable(controller: state.clientController),
-        );
-
-        // Trigger edge lock at top
-        state.onTouchDown();
-        state.handleTouchScroll(-10.0);
-        fakeTime += 50;
-        state.handleTouchScroll(-10.0);
-        state.onTouchUp();
-        expect(state.physicsPhase, ScrollPhysicsPhase.edgeLocked);
-        expect(state.isScrollBlocked, isTrue);
-
-        // Simulate recoil end while edge is locked — should NOT restore
-        state.isRecoilScroll = false;
-        state.onAnimationStateChanged();
-        expect(state.isScrollBlocked, isTrue);
-
-        state.dispose();
-      },
-    );
-  });
-
   group('SilkyScrollState — cancelSilkyScroll', () {
     late SilkyScrollState state;
-    late SilkyScrollMousePointerManager manager;
+    late SilkyScrollGlobalManager manager;
 
     setUp(() {
-      manager = SilkyScrollMousePointerManager.instance;
+      manager = SilkyScrollGlobalManager.instance;
       manager.resetForTesting();
     });
 

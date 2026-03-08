@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart';
-import 'silky_scroll_mouse_pointer_manager.dart';
+import 'silky_scroll_global_manager.dart';
 
 /// Callback interface used by [SilkyInputHandler] to communicate
 /// input events back to the owning [SilkyScrollState].
@@ -8,14 +8,15 @@ abstract interface class SilkyInputHandlerDelegate {
   double get scrollSpeed;
   bool get isWebPlatform;
 
-  void handleTouchScroll(double delta);
+  void handleTrackpadScroll(double delta);
+  void handleTouchDragScroll(double delta);
   void handleMouseScroll(double delta, double scrollSpeed);
   void blockOverscrollBehaviorX();
 
   void Function(double delta)? get onScroll;
   Function(PointerDeviceKind) get setPointerDeviceKind;
 
-  SilkyScrollMousePointerManager get silkyScrollMousePointerManager;
+  SilkyScrollGlobalManager get silkyScrollGlobalManager;
 }
 
 /// Routes mouse, trackpad, and touch input to the correct scroll handler.
@@ -28,6 +29,9 @@ final class SilkyInputHandler {
   final SilkyInputHandlerDelegate _delegate;
 
   /// Processes touch or trackpad scroll input.
+  ///
+  /// Routes to [handleTrackpadScroll] or [handleTouchDragScroll]
+  /// based on [kind].
   void triggerTouchAction(Offset delta, PointerDeviceKind kind) {
     final double scrollDelta;
     if (kind == PointerDeviceKind.trackpad && _delegate.isWebPlatform) {
@@ -40,9 +44,12 @@ final class SilkyInputHandler {
       _delegate.blockOverscrollBehaviorX();
     }
 
-    if (scrollDelta.abs() >= 0.5) {
-      _delegate.handleTouchScroll(scrollDelta);
+    if (kind == PointerDeviceKind.trackpad) {
+      _delegate.handleTrackpadScroll(scrollDelta);
+    } else {
+      _delegate.handleTouchDragScroll(scrollDelta);
     }
+
     _delegate.onScroll?.call(scrollDelta);
   }
 
@@ -51,6 +58,6 @@ final class SilkyInputHandler {
     _delegate.setPointerDeviceKind(PointerDeviceKind.mouse);
     _delegate.onScroll?.call(scrollDeltaY);
     _delegate.handleMouseScroll(scrollDeltaY, _delegate.scrollSpeed);
-    _delegate.silkyScrollMousePointerManager.clearTrackpadMemory();
+    _delegate.silkyScrollGlobalManager.clearTrackpadMemory();
   }
 }

@@ -14,11 +14,6 @@ const double _kSnapThreshold = 0.9;
 /// Higher values make the scroll converge faster toward [futurePosition].
 const double kDefaultDecayLogFactor = 12;
 
-/// Default value for [SilkyScrollAnimator.recoilDurationSec].
-///
-/// Duration of the recoil (bounce-back) animation in seconds.
-const double kDefaultRecoilDurationSec = 0.2;
-
 /// Callback interface used by [SilkyScrollAnimator] to communicate
 /// state changes back to the owning [SilkyScrollState].
 abstract interface class SilkyScrollAnimatorDelegate {
@@ -42,19 +37,18 @@ abstract interface class SilkyScrollAnimatorDelegate {
 
   set isOnSilkyScrolling(bool value);
 
-  bool get isRecoilScroll;
-
-  set isRecoilScroll(bool value);
-
   bool get isDisposed;
-
-  void onAnimationStateChanged();
 
   /// Toggle the ballistic-suppression flag on the scroll position.
   ///
   /// While `true`, [SilkyScrollPosition.goBallistic] is a no-op,
   /// preventing Flutter's physics from fighting with our Ticker.
   void setSilkyTickerActive(bool active);
+
+  /// Triggers Flutter's native ballistic simulation on the current
+  /// scroll position, allowing [BouncingScrollPhysics] to animate
+  /// the overscrolled offset back to the nearest edge.
+  void triggerNativeBounce();
 }
 
 /// Handles smooth-scroll animation using a single [Ticker].
@@ -75,7 +69,6 @@ final class SilkyScrollAnimator {
     TickerProvider vsync, {
     required this.maxBounceOvershoot,
     this.decayLogFactor = kDefaultDecayLogFactor,
-    this.recoilDurationSec = kDefaultRecoilDurationSec,
   }) : _smoothingFactor =
            decayLogFactor /
            (_delegate.silkyScrollDuration.inMilliseconds / 1000.0) {
@@ -89,20 +82,12 @@ final class SilkyScrollAnimator {
   /// Higher values make the scroll converge faster toward [futurePosition].
   final double decayLogFactor;
 
-  /// Duration of the recoil (bounce-back) animation in seconds.
-  final double recoilDurationSec;
-
   /// Exponential decay rate derived from [silkyScrollDuration].
   /// Higher values → faster convergence to [futurePosition].
   final double _smoothingFactor;
 
   late final Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
-
-  // ── Recoil (bounce-back to edge) state ────────────────────────
-  double? _recoilTarget;
-  double _recoilStartOffset = 0;
-  double _recoilElapsedSec = 0;
 
   /// Animates the scroll towards a new position based on [scrollDelta].
   ///
@@ -131,9 +116,6 @@ final class SilkyScrollAnimator {
       controller.position.minScrollExtent - overshoot,
       controller.position.maxScrollExtent + overshoot,
     );
-
-    // Clear any recoil in progress — new scroll input takes priority.
-    _recoilTarget = null;
 
     // Start the ticker if not already running.
     _delegate.isOnSilkyScrolling = true;
@@ -176,12 +158,6 @@ final class SilkyScrollAnimator {
 
     final controller = _delegate.clientController;
 
-    // ── Recoil phase (bounce-back to edge) ──
-    if (_recoilTarget != null) {
-      _tickRecoil(controller, dt);
-      return;
-    }
-
     // ── Normal smooth-scroll phase ──
     _tickScroll(controller, dt);
   }
@@ -194,10 +170,8 @@ final class SilkyScrollAnimator {
     if (diff.abs() < _kSnapThreshold) {
       controller.jumpTo(target);
       _delegate.isOnSilkyScrolling = false;
-      _checkRecoil(controller);
-      if (_recoilTarget == null) {
-        _stopTicker();
-      }
+      _stopTicker();
+      _triggerNativeBounceIfNeeded(controller);
       return;
     }
 
@@ -209,56 +183,26 @@ final class SilkyScrollAnimator {
     controller.jumpTo(current + diff * factor);
   }
 
-  void _tickRecoil(ScrollController controller, double dt) {
-    _recoilElapsedSec += dt;
-    final double t = (_recoilElapsedSec / recoilDurationSec).clamp(0.0, 1.0);
-    final double curved = Curves.easeInOutSine.transform(t);
-    final double newPos =
-        _recoilStartOffset + (_recoilTarget! - _recoilStartOffset) * curved;
-
-    controller.jumpTo(newPos);
-
-    if (t >= 1.0) {
-      controller.jumpTo(_recoilTarget!);
-      _recoilTarget = null;
-      _delegate.isRecoilScroll = false;
-      _delegate.onAnimationStateChanged();
-      _delegate.futurePosition = controller.offset;
-      _stopTicker();
-    }
-  }
-
-  void _checkRecoil(ScrollController controller) {
+  /// After the smooth-scroll ticker stops, delegates any overscroll
+  /// bounce-back to Flutter's native [BouncingScrollPhysics].
+  ///
+  /// Calls [ScrollPosition.goBallistic] which creates a
+  /// [BouncingScrollSimulation] that animates the offset back to the
+  /// nearest edge.
+  void _triggerNativeBounceIfNeeded(ScrollController controller) {
     if (!_delegate.isPlatformBouncingScrollPhysics) return;
 
-    final double? edgePosition = switch (controller.offset) {
-      final o when o > controller.position.maxScrollExtent =>
-        controller.position.maxScrollExtent,
-      final o when o < controller.position.minScrollExtent =>
-        controller.position.minScrollExtent,
-      _ => null,
-    };
-
-    if (edgePosition != null) {
-      _delegate.isRecoilScroll = true;
-      _delegate.onAnimationStateChanged();
-      _recoilTarget = edgePosition;
-      _recoilStartOffset = controller.offset;
-      _recoilElapsedSec = 0;
-      _ensureTickerRunning();
+    final pos = controller.position;
+    if (pos.pixels < pos.minScrollExtent || pos.pixels > pos.maxScrollExtent) {
+      _delegate.triggerNativeBounce();
     }
   }
 
   /// Immediately cancels any in-progress animation (scroll or recoil).
   void cancel() {
     _stopTicker();
-    _recoilTarget = null;
     if (_delegate.isOnSilkyScrolling) {
       _delegate.isOnSilkyScrolling = false;
-    }
-    if (_delegate.isRecoilScroll) {
-      _delegate.isRecoilScroll = false;
-      _delegate.onAnimationStateChanged();
     }
   }
 

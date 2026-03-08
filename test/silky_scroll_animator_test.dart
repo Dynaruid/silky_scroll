@@ -38,23 +38,20 @@ class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
   bool isOnSilkyScrolling = false;
 
   @override
-  bool isRecoilScroll = false;
-
-  @override
   bool isDisposed = false;
-
-  int animationStateChangedCount = 0;
-
-  @override
-  void onAnimationStateChanged() {
-    animationStateChangedCount++;
-  }
 
   bool silkyTickerActiveState = false;
 
   @override
   void setSilkyTickerActive(bool active) {
     silkyTickerActiveState = active;
+  }
+
+  int triggerNativeBounceCount = 0;
+
+  @override
+  void triggerNativeBounce() {
+    triggerNativeBounceCount++;
   }
 }
 
