@@ -402,12 +402,20 @@ class SilkyScrollState extends ChangeNotifier
       return;
     }
 
+    // If the offset is currently in the overscroll region (past the
+    // edge on a bouncing-physics platform), do NOT block physics.
+    // Blocking would cause createBallisticSimulation() to return null
+    // when goBallistic fires — which happens AFTER this Listener
+    // callback in the pointer-up dispatch order — killing the
+    // bounce-back animation and leaving the offset stuck.
+    final bool isOverscrolled = !_isWithinScrollExtent();
+
     // Don't block physics on BouncingScrollPhysics platforms (iOS) —
     // blocking would suppress createBallisticSimulation(), killing the
     // native bounce-back animation.  The edgeLocked phase alone is
     // enough to suppress the overscroll indicator and forward outward
     // deltas to the ancestor scrollable.
-    if (!isPlatformBouncingScrollPhysics) {
+    if (!isPlatformBouncingScrollPhysics && !isOverscrolled) {
       _setBlocked(true);
     }
 
@@ -460,8 +468,19 @@ class SilkyScrollState extends ChangeNotifier
   void _unlockScroll() {
     if (!_disposed) {
       _lockedEdgeDirection = 0;
+      final bool wasBlocked = _blockingState.isBlocked;
       _setBlocked(false);
       _transitionTo(ScrollPhysicsPhase.normal);
+
+      // If physics were blocked while the offset was in the overscroll
+      // region, the bounce-back simulation may have been suppressed.
+      // Trigger goBallistic(0) so the platform physics can create a
+      // new simulation to bring the scroll back into bounds.
+      if (wasBlocked &&
+          clientController.hasClients &&
+          !_isWithinScrollExtent()) {
+        silkyScrollController.currentSilkyScrollPosition?.goBallistic(0.0);
+      }
     }
   }
 

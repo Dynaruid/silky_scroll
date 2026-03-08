@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.4.1
+
+### Fixed
+
+- **Bounce-back freeze on BouncingScrollPhysics**: Fixed a bug where lifting the finger while the scroll offset was in the overscroll region (iOS bounce) could permanently freeze the scroll position. `_checkEdgeLockOnTouchUp` now skips `_setBlocked(true)` when the offset is outside the normal scroll extent, preventing `createBallisticSimulation()` from being suppressed by the blocking state before Flutter's `goBallistic()` fires.
+- **Bounce-back recovery on unlock**: `_unlockScroll` now triggers `goBallistic(0.0)` when physics were blocked and the offset is still in the overscroll region, ensuring the bounce-back simulation restarts after the edge-lock timer expires.
+
 ## 2.4.0
 
 ### Breaking

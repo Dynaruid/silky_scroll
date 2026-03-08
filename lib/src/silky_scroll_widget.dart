@@ -24,7 +24,7 @@ class SilkyScroll extends StatefulWidget {
   const SilkyScroll({
     super.key,
     this.controller,
-    this.silkyScrollDuration = const Duration(milliseconds: 700),
+    this.silkyScrollDuration = const Duration(milliseconds: 850),
     this.scrollSpeed = 1,
     this.animationCurve = Curves.easeOutQuart,
     this.direction = Axis.vertical,
