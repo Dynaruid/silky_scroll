@@ -105,7 +105,7 @@ class SilkyScrollState extends ChangeNotifier
   @override
   final Duration silkyScrollDuration;
   @override
-  late final bool isPlatformBouncingScrollPhysics;
+  bool isPlatformBouncingScrollPhysics = false;
 
   final double decayLogFactor;
 
@@ -262,6 +262,24 @@ class SilkyScrollState extends ChangeNotifier
   /// Supplies the widget [BuildContext] so that the state can find an
   /// ancestor [Scrollable] for delta forwarding when edge-locked.
   set widgetContext(BuildContext context) => _widgetContext = context;
+
+  /// Re-detects [isPlatformBouncingScrollPhysics] from the runtime-resolved
+  /// physics chain obtained via [ScrollConfiguration].
+  ///
+  /// Must be called from the widget's `build()` where a valid
+  /// [BuildContext] is available.  This covers the case where the
+  /// widget-level physics is the default `ScrollPhysics()` which
+  /// resolves to `BouncingScrollPhysics` on iOS/macOS at runtime.
+  void detectBouncingPhysics(BuildContext context) {
+    if (widgetScrollPhysics is BouncingScrollPhysics) {
+      isPlatformBouncingScrollPhysics = true;
+      return;
+    }
+    final ScrollPhysics resolved = ScrollConfiguration.of(
+      context,
+    ).getScrollPhysics(context);
+    isPlatformBouncingScrollPhysics = resolved is BouncingScrollPhysics;
+  }
 
   /// Routes touch/trackpad input through [SilkyInputHandler].
   void triggerTouchAction(Offset delta, PointerDeviceKind kind) =>
@@ -499,14 +517,14 @@ class SilkyScrollState extends ChangeNotifier
   /// (i.e. not in a BouncingScrollPhysics overscroll region).
   ///
   /// Returns `true` when `pixels` is between [minScrollExtent] and
-  /// [maxScrollExtent].  Uses integer rounding to absorb sub-pixel
-  /// differences.  Used to distinguish "at edge" from "mid-bounce"
-  /// on bouncing platforms.
+  /// [maxScrollExtent] within a small tolerance.  Used to distinguish
+  /// "at edge" from "mid-bounce" on bouncing platforms.
+  static const double _kExtentTolerance = 0.5;
   bool _isWithinScrollExtent() {
     if (!clientController.hasClients) return false;
     final ScrollPosition pos = clientController.position;
-    final int pixels = pos.pixels.round();
-    return pixels >= 0 && pixels <= pos.maxScrollExtent.round();
+    return pos.pixels >= pos.minScrollExtent - _kExtentTolerance &&
+        pos.pixels <= pos.maxScrollExtent + _kExtentTolerance;
   }
 
   /// Forwards [delta] to the nearest ancestor [Scrollable]'s

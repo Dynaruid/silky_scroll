@@ -147,7 +147,7 @@ class _BasicScrollPageState extends State<BasicScrollPage> {
           Expanded(
             child: SilkyScroll(
               controller: _controller,
-              physics: ClampingScrollPhysics(),
+            //  physics: ClampingScrollPhysics(),
               enableStretchEffect: true,
               onScroll: _onScroll,
               onEdgeOverScroll: _onEdgeOverScroll,

@@ -41,6 +41,7 @@ final class SilkyScrollController extends ScrollController {
     if (!clientController.positions.contains(position)) {
       clientController.attach(position);
     }
+    debugPrint('[SilkyScrollController] attach: position=$position');
     super.attach(position);
   }
 
@@ -77,6 +78,32 @@ final class SilkyScrollPosition extends ScrollPositionWithSingleContext {
   /// it forward.  The two fight each other every frame, producing
   /// visible stutter.
   bool silkyTickerActive = false;
+
+  @override
+  void correctBy(double correction) {
+    // _RenderSingleChildViewport.performLayout() clamps pixels to
+    // [minScrollExtent, maxScrollExtent] via correctBy() BEFORE
+    // applyContentDimensions is called.  On BouncingScrollPhysics
+    // platforms (iOS/macOS) this kills an in-progress overscroll
+    // bounce whenever the child content relayouts (e.g. a timer
+    // tick rebuilding a descendant widget).
+    //
+    // Suppress the correction when all of the following are true:
+    //   • the correction is non-zero,
+    //   • pixels are already initialised,
+    //   • the position is currently in the overscroll region,
+    //   • a scroll activity is in progress (drag or ballistic).
+
+    if (correction != 0.0 &&
+        hasPixels &&
+        outOfRange &&
+        activity != null &&
+        activity!.isScrolling) {
+      debugPrint('[SilkyScroll] correctBy BLOCKED (overscroll + scrolling)');
+      return;
+    }
+    super.correctBy(correction);
+  }
 
   @override
   void goBallistic(double velocity) {

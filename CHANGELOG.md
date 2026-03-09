@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.4.2
+
+### Changed
+
+- **`isPlatformBouncingScrollPhysics` runtime detection**: Changed from `late final bool` to `bool` so it can be re-evaluated on every build. Added `detectBouncingPhysics(BuildContext)` method that resolves the physics chain via `ScrollConfiguration.of(context).getScrollPhysics(context)` at runtime.
+- **Build-time detection call**: `SilkyScrollWidget.build()` now calls `silkyScrollState.detectBouncingPhysics(context)` on every build to keep bouncing-physics detection up to date.
+
+### Fixed
+
+- **`_isWithinScrollExtent()` precision**: Replaced `.round()`-based integer comparison with ±0.5 px tolerance comparison. Also changed `pixels >= 0` to `pixels >= pos.minScrollExtent - 0.5` to handle cases where `minScrollExtent` is non-zero. This prevents offsets exceeding `maxExtent` by a sub-pixel amount (e.g. 0.3 px) from being misidentified as "within range", which could trigger an incorrect physics block.
+- **`SilkyScrollPosition.correctBy` override**: Added override in `SilkyScrollPosition` that suppresses the viewport's clamp correction while in the overscroll region (`outOfRange`) during an active scroll (`activity!.isScrolling`), preventing BouncingScrollPhysics bounce-back from being clamped. Normal correction is preserved during `IdleScrollActivity` and during initialization (`activity == null`).
+
 ## 2.4.1
 
 ### Fixed

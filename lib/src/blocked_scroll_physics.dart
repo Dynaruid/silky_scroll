@@ -28,6 +28,10 @@ final class DynamicBlockingScrollPhysics extends ScrollPhysics {
     required this.blockingState,
   });
 
+  /// Small tolerance so that floating-point rounding near the edge
+  /// is not mistaken for genuine overscroll.
+  static const double _kOverscrollTolerance = 0.5;
+
   final ScrollBlockingState blockingState;
 
   @override
@@ -35,6 +39,30 @@ final class DynamicBlockingScrollPhysics extends ScrollPhysics {
     return DynamicBlockingScrollPhysics(
       parent: buildParent(ancestor),
       blockingState: blockingState,
+    );
+  }
+
+  @override
+  double adjustPositionForNewDimensions({
+    required ScrollMetrics oldPosition,
+    required ScrollMetrics newPosition,
+    required bool isScrolling,
+    required double velocity,
+  }) {
+    final pixels = newPosition.pixels;
+    // When the position is already in the overscroll region (past the
+    // old scroll extents), preserve it.  This prevents a child-widget
+    // rebuild that changes content dimensions from snapping an active
+    // BouncingScrollPhysics bounce back to the edge.
+    if (pixels < oldPosition.minScrollExtent - _kOverscrollTolerance ||
+        pixels > oldPosition.maxScrollExtent + _kOverscrollTolerance) {
+      return pixels;
+    }
+    return super.adjustPositionForNewDimensions(
+      oldPosition: oldPosition,
+      newPosition: newPosition,
+      isScrolling: isScrolling,
+      velocity: velocity,
     );
   }
 

@@ -290,6 +290,7 @@ class _SilkyScrollState extends State<SilkyScroll>
   @override
   Widget build(BuildContext context) {
     silkyScrollState.widgetContext = context;
+    silkyScrollState.detectBouncingPhysics(context);
     return MouseRegion(
       onEnter: (e) {
         silkyScrollGlobalManager.enteredKey(silkyScrollState.instanceKey);
