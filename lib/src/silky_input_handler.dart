@@ -11,7 +11,6 @@ abstract interface class SilkyInputHandlerDelegate {
   void handleTrackpadScroll(double delta);
   void handleTouchDragScroll(double delta);
   void handleMouseScroll(double delta, double scrollSpeed);
-  void blockOverscrollBehaviorX();
 
   void Function(double delta)? get onScroll;
   Function(PointerDeviceKind) get setPointerDeviceKind;
@@ -38,10 +37,6 @@ final class SilkyInputHandler {
       scrollDelta = _delegate.isVertical ? delta.dy : delta.dx;
     } else {
       scrollDelta = _delegate.isVertical ? -delta.dy : -delta.dx;
-    }
-
-    if (kind == PointerDeviceKind.trackpad) {
-      _delegate.blockOverscrollBehaviorX();
     }
 
     if (kind == PointerDeviceKind.trackpad) {

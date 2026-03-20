@@ -47,6 +47,7 @@ final class SilkyScrollConfig {
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
+    this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
   });
 
@@ -83,6 +84,12 @@ final class SilkyScrollConfig {
   /// Exponential-decay log factor for the smooth-scroll animation.
   final double decayLogFactor;
 
+  /// Whether to block browser back/forward swipe gestures on web.
+  ///
+  /// When `true`, `overscroll-behavior-x: none` is applied while
+  /// this widget is mounted. Defaults to `true`.
+  final bool blockWebOverscrollBehaviorX;
+
   /// Enables debug logging.
   final bool debugMode;
 
@@ -104,6 +111,7 @@ final class SilkyScrollConfig {
     bool? enableStretchEffect,
     EdgeForwardingMode? edgeForwardingMode,
     double? decayLogFactor,
+    bool? blockWebOverscrollBehaviorX,
     bool? debugMode,
   }) {
     return SilkyScrollConfig(
@@ -118,6 +126,8 @@ final class SilkyScrollConfig {
       enableStretchEffect: enableStretchEffect ?? this.enableStretchEffect,
       edgeForwardingMode: edgeForwardingMode ?? this.edgeForwardingMode,
       decayLogFactor: decayLogFactor ?? this.decayLogFactor,
+      blockWebOverscrollBehaviorX:
+          blockWebOverscrollBehaviorX ?? this.blockWebOverscrollBehaviorX,
       debugMode: debugMode ?? this.debugMode,
     );
   }
@@ -137,6 +147,7 @@ final class SilkyScrollConfig {
           enableStretchEffect == other.enableStretchEffect &&
           edgeForwardingMode == other.edgeForwardingMode &&
           decayLogFactor == other.decayLogFactor &&
+          blockWebOverscrollBehaviorX == other.blockWebOverscrollBehaviorX &&
           debugMode == other.debugMode;
 
   @override
@@ -151,6 +162,7 @@ final class SilkyScrollConfig {
     enableStretchEffect,
     edgeForwardingMode,
     decayLogFactor,
+    blockWebOverscrollBehaviorX,
     debugMode,
   );
 
@@ -165,5 +177,6 @@ final class SilkyScrollConfig {
       'enableStretchEffect: $enableStretchEffect, '
       'edgeForwardingMode: $edgeForwardingMode, '
       'decayLogFactor: $decayLogFactor, '
+      'blockWebOverscrollBehaviorX: $blockWebOverscrollBehaviorX, '
       'debugMode: $debugMode)';
 }

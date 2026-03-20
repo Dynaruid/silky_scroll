@@ -23,12 +23,6 @@ abstract interface class SilkyScrollWebManagerInterface {
   /// Whether the current platform is web.
   bool get isWebPlatform;
 
-  /// Applies `overscroll-behavior-x: none` once during initialisation.
-  ///
-  /// Called automatically by [SilkyScrollGlobalManager]; users
-  /// do not need to call this.
-  void blockOverscrollBehaviorXHtml();
-
   /// Manually sets `overscroll-behavior-x` to [value].
   void setOverscrollBehaviorX(OverscrollBehaviorX value);
 }

@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.0
+
+### Added
+
+- **Preset widgets**: Drop-in replacements for Flutter scrollable widgets with built-in SilkyScroll smooth scrolling — no manual `controller` / `physics` wiring needed.
+  - `SilkyListView` — wraps `ListView` (default, `.builder`, `.separated`)
+  - `SilkyGridView` — wraps `GridView` (default, `.builder`, `.count`, `.extent`)
+  - `SilkyCustomScrollView` — wraps `CustomScrollView`
+  - `SilkySingleChildScrollView` — wraps `SingleChildScrollView`
+- **`silkyConfig` parameter on presets**: Accepts a `SilkyScrollConfig` to share configuration across multiple preset widgets. When provided, overrides individual SilkyScroll parameters.
+- **`onPointerDeviceKindChanged` callback on presets**: Optional callback that fires when the detected `PointerDeviceKind` changes (mouse, trackpad, touch).
+
+## 2.5.0
+
+### Breaking
+
+- **Removed `OverscrollBehaviorX` enum export**: The `OverscrollBehaviorX` enum is no longer exported from the barrel file. Use `setBlockOverscrollBehaviorX(bool)` instead.
+- **Removed `setOverscrollBehaviorX(OverscrollBehaviorX)` API**: Replaced with `setBlockOverscrollBehaviorX(bool)` on `SilkyScrollGlobalManager`.
+- **`overscroll-behavior-x` no longer applied at import time**: The CSS property is now managed per-widget lifecycle instead of being set globally when `SilkyScrollGlobalManager` is initialized.
+
+### Added
+
+- **`blockWebOverscrollBehaviorX` parameter**: New parameter on `SilkyScroll` and `SilkyScrollConfig` (default: `true`). When `true`, `overscroll-behavior-x: none` is applied while the widget is mounted; when all blocking widgets are disposed, it reverts to `auto`.
+- **`setBlockOverscrollBehaviorX(bool)` API**: New global API on `SilkyScrollGlobalManager` for explicit user-level overscroll blocking control.
+- **Widget-based block counting**: Multiple `SilkyScroll` widgets can coexist — the CSS block is maintained as long as at least one widget (or the global flag) requests it.
+
+### Changed
+
+- **Overscroll behavior lifecycle**: `overscroll-behavior-x` CSS is now synced via `_syncOverscrollBehaviorX()`, combining widget-level block count and user-level flag (`shouldBlock = widgetBlockCount > 0 || userBlock`).
+
+### Removed
+
+- `blockOverscrollBehaviorXHtml()` method from `SilkyScrollWebManagerInterface` and its implementations.
+
+## 2.4.3
+
+### Fixed
+
+- **Export `SilkyScrollGlobalManager`**: Added missing `SilkyScrollGlobalManager` export to the barrel file (`silky_scroll.dart`).
+
 ## 2.4.2
 
 ### Changed

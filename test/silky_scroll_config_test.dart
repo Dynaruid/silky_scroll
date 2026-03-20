@@ -13,6 +13,7 @@ void main() {
       expect(config.edgeLockingDelay, const Duration(milliseconds: 650));
       expect(config.enableStretchEffect, isTrue);
       expect(config.edgeForwardingMode, EdgeForwardingMode.sameAxisOnly);
+      expect(config.blockWebOverscrollBehaviorX, isTrue);
       expect(config.debugMode, isFalse);
     });
 
@@ -22,10 +23,12 @@ void main() {
         scrollSpeed: 2.5,
         debugMode: true,
         edgeForwardingMode: EdgeForwardingMode.none,
+        blockWebOverscrollBehaviorX: false,
       );
       expect(modified.scrollSpeed, 2.5);
       expect(modified.debugMode, isTrue);
       expect(modified.edgeForwardingMode, EdgeForwardingMode.none);
+      expect(modified.blockWebOverscrollBehaviorX, isFalse);
       // Unchanged fields
       expect(modified.silkyScrollDuration, original.silkyScrollDuration);
       expect(modified.animationCurve, original.animationCurve);
@@ -58,6 +61,7 @@ void main() {
       expect(str, contains('SilkyScrollConfig'));
       expect(str, contains('scrollSpeed: 1.5'));
       expect(str, contains('debugMode: true'));
+      expect(str, contains('blockWebOverscrollBehaviorX: true'));
       expect(
         str,
         contains('edgeForwardingMode: EdgeForwardingMode.sameAxisOnly'),

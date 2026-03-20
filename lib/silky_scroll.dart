@@ -19,5 +19,11 @@ export 'src/silky_scroll_config.dart'
 export 'src/silky_scroll_state.dart' show ScrollPhysicsPhase;
 export 'src/scroll_delta_sample.dart' show ScrollDeltaSample;
 export 'src/scroll_delta_sample_analyzer.dart' show ScrollDeltaSampleAnalyzer;
-export 'src/silky_scroll_web_helper/silky_scroll_web_helper_interface.dart'
-    show OverscrollBehaviorX;
+export 'src/silky_scroll_global_manager.dart' show SilkyScrollGlobalManager;
+
+// Preset widgets
+export 'src/presets/silky_list_view.dart' show SilkyListView;
+export 'src/presets/silky_grid_view.dart' show SilkyGridView;
+export 'src/presets/silky_custom_scroll_view.dart' show SilkyCustomScrollView;
+export 'src/presets/silky_single_child_scroll_view.dart'
+    show SilkySingleChildScrollView;

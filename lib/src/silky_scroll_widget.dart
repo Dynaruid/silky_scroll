@@ -34,6 +34,7 @@ class SilkyScroll extends StatefulWidget {
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
+    this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
     this.setManualPointerDeviceKind,
     this.onScroll,
@@ -63,6 +64,7 @@ class SilkyScroll extends StatefulWidget {
        enableStretchEffect = config.enableStretchEffect,
        edgeForwardingMode = config.edgeForwardingMode,
        decayLogFactor = config.decayLogFactor,
+       blockWebOverscrollBehaviorX = config.blockWebOverscrollBehaviorX,
        debugMode = config.debugMode;
 
   /// An optional external [ScrollController].
@@ -116,6 +118,12 @@ class SilkyScroll extends StatefulWidget {
   ///
   /// Defaults to `true`.
   final bool enableStretchEffect;
+
+  /// Whether to block browser back/forward swipe gestures on web.
+  ///
+  /// When `true`, `overscroll-behavior-x: none` is applied while
+  /// this widget is mounted. Defaults to `true`.
+  final bool blockWebOverscrollBehaviorX;
 
   /// Controls how edge-locked scroll deltas are forwarded to
   /// ancestor [Scrollable] widgets.
@@ -175,6 +183,9 @@ class _SilkyScrollState extends State<SilkyScroll>
     );
     currentPhysics = silkyScrollState.currentScrollPhysics;
     silkyScrollState.addListener(_onPhysicsChanged);
+    if (widget.blockWebOverscrollBehaviorX) {
+      silkyScrollGlobalManager.incrementWidgetBlock();
+    }
   }
 
   @override
@@ -182,6 +193,14 @@ class _SilkyScrollState extends State<SilkyScroll>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.physics != widget.physics) {
       silkyScrollState.setWidgetScrollPhysics(scrollPhysics: widget.physics);
+    }
+    if (oldWidget.blockWebOverscrollBehaviorX !=
+        widget.blockWebOverscrollBehaviorX) {
+      if (widget.blockWebOverscrollBehaviorX) {
+        silkyScrollGlobalManager.incrementWidgetBlock();
+      } else {
+        silkyScrollGlobalManager.decrementWidgetBlock();
+      }
     }
   }
 
@@ -200,6 +219,9 @@ class _SilkyScrollState extends State<SilkyScroll>
 
   @override
   void dispose() {
+    if (widget.blockWebOverscrollBehaviorX) {
+      silkyScrollGlobalManager.decrementWidgetBlock();
+    }
     silkyScrollState.removeListener(_onPhysicsChanged);
     silkyScrollState.dispose();
     super.dispose();

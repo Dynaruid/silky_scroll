@@ -8,7 +8,6 @@ import 'silky_scroll_web_helper/silky_scroll_web_helper_interface.dart';
 final class SilkyScrollGlobalManager {
   SilkyScrollGlobalManager._internal() {
     silkyScrollWebManager = SilkyScrollWebManager();
-    silkyScrollWebManager.blockOverscrollBehaviorXHtml();
   }
 
   static final SilkyScrollGlobalManager instance =
@@ -17,6 +16,10 @@ final class SilkyScrollGlobalManager {
   UniqueKey? reserveKey;
   final List<UniqueKey> keyStack = [];
   late final SilkyScrollWebManager silkyScrollWebManager;
+
+  // ── Overscroll behavior X ──
+  int _widgetBlockCount = 0;
+  bool _userBlock = false;
 
   // ── Trackpad detection timers ──
   //
@@ -114,14 +117,36 @@ final class SilkyScrollGlobalManager {
     exitKey(key);
   }
 
-  /// Manually sets the HTML body's `overscroll-behavior-x` CSS property.
+  /// Called by [SilkyScroll] widget on mount when
+  /// `blockWebOverscrollBehaviorX` is `true`.
+  void incrementWidgetBlock() {
+    _widgetBlockCount++;
+    _syncOverscrollBehaviorX();
+  }
+
+  /// Called by [SilkyScroll] widget on dispose when
+  /// `blockWebOverscrollBehaviorX` is `true`.
+  void decrementWidgetBlock() {
+    _widgetBlockCount--;
+    _syncOverscrollBehaviorX();
+  }
+
+  /// Explicitly sets or clears the user-level overscroll-behavior-x block.
   ///
-  /// By default, [SilkyScrollGlobalManager] blocks browser
-  /// back/forward swipe gestures ([OverscrollBehaviorX.none]) at
-  /// initialisation time.
-  /// Use this to restore or change the behaviour explicitly.
-  void setOverscrollBehaviorX(OverscrollBehaviorX value) {
-    silkyScrollWebManager.setOverscrollBehaviorX(value);
+  /// When [value] is `true`, `overscroll-behavior-x: none` is applied.
+  /// When `false`, the CSS is restored to `auto` (unless widgets still
+  /// request blocking).
+  void setBlockOverscrollBehaviorX(bool value) {
+    _userBlock = value;
+    _syncOverscrollBehaviorX();
+  }
+
+  /// Applies the CSS property based on the combined block state.
+  void _syncOverscrollBehaviorX() {
+    final shouldBlock = (_widgetBlockCount > 0) || _userBlock;
+    silkyScrollWebManager.setOverscrollBehaviorX(
+      shouldBlock ? OverscrollBehaviorX.none : OverscrollBehaviorX.auto,
+    );
   }
 
   /// Resets all mutable state for test isolation.
@@ -131,6 +156,8 @@ final class SilkyScrollGlobalManager {
   void resetForTesting() {
     reserveKey = null;
     keyStack.clear();
+    _widgetBlockCount = 0;
+    _userBlock = false;
     _panZoomTimer?.cancel();
     _panZoomTimer = null;
     _heuristicTrackpadTimer?.cancel();

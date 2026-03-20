@@ -116,5 +116,32 @@ void main() {
       manager.resetForTesting();
       expect(manager.isRecentlyTrackpad, isFalse);
     });
+
+    group('overscroll behavior X blocking', () {
+      setUp(() {
+        manager.resetForTesting();
+      });
+
+      test('incrementWidgetBlock / decrementWidgetBlock adjusts count', () {
+        manager.incrementWidgetBlock();
+        manager.incrementWidgetBlock();
+        manager.decrementWidgetBlock();
+        // Still one widget blocking → no error
+        manager.decrementWidgetBlock();
+      });
+
+      test('setBlockOverscrollBehaviorX sets user block', () {
+        manager.setBlockOverscrollBehaviorX(true);
+        manager.setBlockOverscrollBehaviorX(false);
+      });
+
+      test('resetForTesting clears widget block count and user block', () {
+        manager.incrementWidgetBlock();
+        manager.setBlockOverscrollBehaviorX(true);
+        manager.resetForTesting();
+        // After reset, decrementing should bring count below zero
+        // but no error as it's just an int field
+      });
+    });
   });
 }

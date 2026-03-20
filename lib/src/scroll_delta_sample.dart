@@ -7,7 +7,7 @@ final class ScrollDeltaSample {
   /// Scroll delta in logical pixels (positive = forward/down).
   final double delta;
 
-  /// Timestamp in milliseconds (from [DateTime.now().millisecondsSinceEpoch]).
+  /// Timestamp in milliseconds.
   final int timeMs;
 
   @override

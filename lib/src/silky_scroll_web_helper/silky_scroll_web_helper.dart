@@ -14,12 +14,6 @@ class SilkyScrollWebManager implements SilkyScrollWebManagerInterface {
   bool get isWebPlatform => true;
 
   @override
-  void blockOverscrollBehaviorXHtml() {
-    _rootHtmlElement?.style.overscrollBehaviorX = 'none';
-    _rootBodyElement?.style.overscrollBehaviorX = 'none';
-  }
-
-  @override
   void setOverscrollBehaviorX(OverscrollBehaviorX value) {
     _rootHtmlElement?.style.overscrollBehaviorX = value.cssValue;
     _rootBodyElement?.style.overscrollBehaviorX = value.cssValue;

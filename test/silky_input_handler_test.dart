@@ -18,7 +18,6 @@ class _FakeInputDelegate implements SilkyInputHandlerDelegate {
   double? lastTouchDragDelta;
   double? lastMouseDelta;
   double? lastMouseSpeed;
-  bool blockCalled = false;
   double? lastOnScrollDelta;
   PointerDeviceKind? lastPointerDeviceKind;
 
@@ -36,11 +35,6 @@ class _FakeInputDelegate implements SilkyInputHandlerDelegate {
   void handleMouseScroll(double delta, double scrollSpeed) {
     lastMouseDelta = delta;
     lastMouseSpeed = scrollSpeed;
-  }
-
-  @override
-  void blockOverscrollBehaviorX() {
-    blockCalled = true;
   }
 
   @override

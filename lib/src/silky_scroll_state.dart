@@ -251,12 +251,6 @@ class SilkyScrollState extends ChangeNotifier
   bool get isWebPlatform =>
       silkyScrollGlobalManager.silkyScrollWebManager.isWebPlatform;
 
-  @override
-  void blockOverscrollBehaviorX() {
-    silkyScrollGlobalManager.silkyScrollWebManager
-        .blockOverscrollBehaviorXHtml();
-  }
-
   // ── Public API (delegated) ───────────────────────────────────────
 
   /// Supplies the widget [BuildContext] so that the state can find an
