@@ -257,9 +257,9 @@ The actual CSS is set to `none` when **any** widget requests blocking **or** the
 | Parameter                     | Type                 | Default                           | Description                       |
 | ----------------------------- | -------------------- | --------------------------------- | --------------------------------- |
 | `controller`                  | `ScrollController?`  | `null`                            | External scroll controller        |
-| `silkyScrollDuration`         | `Duration`           | `850ms`                           | Scroll animation duration         |
+| `silkyScrollDuration`         | `Duration`           | `1600ms`                          | Scroll animation duration         |
 | `scrollSpeed`                 | `double`             | `1`                               | Scroll speed multiplier           |
-| `animationCurve`              | `Curve`              | `Curves.easeOutQuart`             | Animation curve                   |
+| `animationCurve`              | `Curve`              | `Curves.easeOutCirc`              | Animation curve                   |
 | `direction`                   | `Axis`               | `vertical`                        | Scroll direction                  |
 | `physics`                     | `ScrollPhysics`      | `ScrollPhysics()`                 | Scroll physics                    |
 | `edgeLockingDelay`            | `Duration`           | `650ms`                           | Lock delay after reaching edge    |

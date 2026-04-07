@@ -6,9 +6,9 @@ void main() {
   group('SilkyScrollConfig', () {
     test('default values', () {
       const config = SilkyScrollConfig();
-      expect(config.silkyScrollDuration, const Duration(milliseconds: 850));
+      expect(config.silkyScrollDuration, const Duration(milliseconds: 1600));
       expect(config.scrollSpeed, 1);
-      expect(config.animationCurve, Curves.easeOutQuart);
+      expect(config.animationCurve, Curves.easeOutCirc);
       expect(config.direction, Axis.vertical);
       expect(config.edgeLockingDelay, const Duration(milliseconds: 650));
       expect(config.enableStretchEffect, isTrue);

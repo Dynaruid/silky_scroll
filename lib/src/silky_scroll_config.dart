@@ -25,7 +25,7 @@ enum EdgeForwardingMode {
 ///
 /// ```dart
 /// const config = SilkyScrollConfig(
-///   silkyScrollDuration: Duration(milliseconds: 1000),
+///   silkyScrollDuration: Duration(milliseconds: 1600),
 ///   scrollSpeed: 1.5,
 /// );
 ///
@@ -37,9 +37,9 @@ enum EdgeForwardingMode {
 @immutable
 final class SilkyScrollConfig {
   const SilkyScrollConfig({
-    this.silkyScrollDuration = const Duration(milliseconds: 850),
+    this.silkyScrollDuration = const Duration(milliseconds: 1600),
     this.scrollSpeed = 1,
-    this.animationCurve = Curves.easeOutQuart,
+    this.animationCurve = Curves.easeOutCirc,
     this.direction = Axis.vertical,
     this.physics = const ScrollPhysics(),
     this.edgeLockingDelay = const Duration(milliseconds: 650),

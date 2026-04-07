@@ -24,9 +24,9 @@ class SilkyScroll extends StatefulWidget {
   const SilkyScroll({
     super.key,
     this.controller,
-    this.silkyScrollDuration = const Duration(milliseconds: 850),
+    this.silkyScrollDuration = const Duration(milliseconds: 1600),
     this.scrollSpeed = 1,
-    this.animationCurve = Curves.easeOutQuart,
+    this.animationCurve = Curves.easeOutCirc,
     this.direction = Axis.vertical,
     this.physics = const ScrollPhysics(),
     this.edgeLockingDelay = const Duration(milliseconds: 650),
@@ -75,7 +75,7 @@ class SilkyScroll extends StatefulWidget {
 
   /// Duration of the smooth scroll animation.
   ///
-  /// Defaults to 700 ms.
+  /// Defaults to 1600 ms.
   final Duration silkyScrollDuration;
 
   /// Multiplier for the scroll delta. Higher values scroll faster.
@@ -85,7 +85,7 @@ class SilkyScroll extends StatefulWidget {
 
   /// The animation curve applied to smooth scrolling.
   ///
-  /// Defaults to [Curves.easeOutQuart].
+  /// Defaults to [Curves.easeOutCirc].
   final Curve animationCurve;
 
   /// The scroll direction. Defaults to [Axis.vertical].

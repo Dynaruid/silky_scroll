@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.1
+
+### Changed
+
+- **Default `silkyScrollDuration`**: Changed from `850ms` to `1600ms` for a more natural, buttery-smooth scroll feel.
+- **Default `animationCurve`**: Changed from `Curves.easeOutQuart` to `Curves.easeOutCirc` to better complement the longer animation duration.
+- **Removed internal `_kScrollDeltaFactor` (0.5 multiplier)**: Scroll delta is now applied directly without the hidden halving factor. `scrollSpeed` now reflects the full intended distance without an invisible reduction.
+- **README**: Comprehensively rewritten — clearer structure, preset widget table, before/after examples, and improved parameter documentation.
+- **Code style**: Internal formatting and documentation comment improvements across `SilkyScrollAnimator`, `SilkyScrollConfig`, `SilkyScrollController`, `SilkyScrollWidget`, and all preset widgets.
+
 ## 2.6.0
 
 ### Added

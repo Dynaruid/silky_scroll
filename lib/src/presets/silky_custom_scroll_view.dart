@@ -14,9 +14,9 @@ class SilkyCustomScrollView extends StatelessWidget {
     super.key,
     // SilkyScroll configuration
     this.silkyConfig,
-    this.silkyScrollDuration = const Duration(milliseconds: 850),
+    this.silkyScrollDuration = const Duration(milliseconds: 1600),
     this.scrollSpeed = 1,
-    this.animationCurve = Curves.easeOutQuart,
+    this.animationCurve = Curves.easeOutCirc,
     this.physics = const ScrollPhysics(),
     this.edgeLockingDelay = const Duration(milliseconds: 650),
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),

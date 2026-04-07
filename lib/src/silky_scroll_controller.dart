@@ -41,7 +41,7 @@ final class SilkyScrollController extends ScrollController {
     if (!clientController.positions.contains(position)) {
       clientController.attach(position);
     }
-    debugPrint('[SilkyScrollController] attach: position=$position');
+
     super.attach(position);
   }
 

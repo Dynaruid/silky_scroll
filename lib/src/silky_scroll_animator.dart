@@ -2,8 +2,6 @@ import 'dart:math';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/material.dart';
 
-const double _kScrollDeltaFactor = 0.5;
-
 /// Snap threshold: when the remaining distance is below this value
 /// (in logical pixels), the scroll jumps to the target and stops.
 const double _kSnapThreshold = 0.9;
@@ -101,11 +99,10 @@ final class SilkyScrollAnimator {
     if (scrollDelta > 0 != _delegate.prevDeltaPositive) {
       _delegate.prevDeltaPositive = !_delegate.prevDeltaPositive;
       _delegate.futurePosition =
-          controller.offset + (scrollDelta * scrollSpeed * _kScrollDeltaFactor);
+          controller.offset + (scrollDelta * scrollSpeed);
     } else {
       _delegate.futurePosition =
-          _delegate.futurePosition +
-          (scrollDelta * scrollSpeed * _kScrollDeltaFactor);
+          _delegate.futurePosition + (scrollDelta * scrollSpeed);
     }
 
     // ── Clamp to edges ± maxBounceOvershoot ─────────────────────

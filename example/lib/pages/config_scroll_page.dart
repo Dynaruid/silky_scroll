@@ -17,14 +17,15 @@ class ConfigScrollPage extends StatefulWidget {
 
 class _ConfigScrollPageState extends State<ConfigScrollPage> {
   double _speed = 1.0;
-  double _durationMs = 700;
+  double _durationMs = 1600;
   double _edgeLockMs = 650;
   bool _stretch = true;
-  Curve _curve = Curves.easeOutQuart;
+  Curve _curve = Curves.easeOutCirc;
   bool _panelOpen = true;
   PointerDeviceKind? _deviceKind;
 
   static const _curveOptions = <String, Curve>{
+    'easeOutCirc': Curves.easeOutCirc,
     'easeOutQuart': Curves.easeOutQuart,
     'easeOutCubic': Curves.easeOutCubic,
     'easeInOut': Curves.easeInOut,
