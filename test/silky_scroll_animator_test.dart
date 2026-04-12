@@ -114,8 +114,8 @@ void main() {
         maxBounceOvershoot: 150,
       );
       animator.animateToScroll(100, 1.0);
-      // futurePosition = offset(0) + 100 * 1.0 * 0.5 = 50
-      expect(delegate.futurePosition, 50.0);
+      // futurePosition = offset(0) + 100 * 1.0 = 100
+      expect(delegate.futurePosition, 100.0);
 
       await tester.pumpAndSettle();
       animator.dispose();

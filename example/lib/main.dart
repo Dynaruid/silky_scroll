@@ -3,6 +3,7 @@ import 'pages/basic_scroll_page.dart';
 import 'pages/nested_scroll_page.dart';
 import 'pages/horizontal_scroll_page.dart';
 import 'pages/config_scroll_page.dart';
+import 'pages/single_child_scroll_view_page.dart';
 import 'theme/app_colors.dart';
 
 void main() {
@@ -39,6 +40,7 @@ class _MainScreenState extends State<MainScreen> {
     NestedScrollPage(),
     HorizontalScrollPage(),
     ConfigScrollPage(),
+    SingleChildScrollViewPage(),
   ];
 
   @override
@@ -70,6 +72,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.tune_outlined),
             selectedIcon: Icon(Icons.tune),
             label: 'Config',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.view_agenda_outlined),
+            selectedIcon: Icon(Icons.view_agenda),
+            label: 'Single',
           ),
         ],
       ),
