@@ -35,6 +35,7 @@ class SilkyScroll extends StatefulWidget {
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
+    this.requireShiftForHorizontalScroll = false,
     this.debugMode = false,
     this.setManualPointerDeviceKind,
     this.onScroll,
@@ -65,6 +66,7 @@ class SilkyScroll extends StatefulWidget {
        edgeForwardingMode = config.edgeForwardingMode,
        decayLogFactor = config.decayLogFactor,
        blockWebOverscrollBehaviorX = config.blockWebOverscrollBehaviorX,
+       requireShiftForHorizontalScroll = config.requireShiftForHorizontalScroll,
        debugMode = config.debugMode;
 
   /// An optional external [ScrollController].
@@ -125,6 +127,16 @@ class SilkyScroll extends StatefulWidget {
   /// this widget is mounted. Defaults to `true`.
   final bool blockWebOverscrollBehaviorX;
 
+  /// Whether to require the Shift key to be pressed for horizontal scrolling.
+  ///
+  /// When `true` and [direction] is [Axis.horizontal], scroll events are only
+  /// processed if the Shift key is held. If Shift is not pressed, scroll events
+  /// are ignored. This is useful when you want to prevent accidental horizontal
+  /// scrolling while allowing normal vertical page scrolling.
+  ///
+  /// Defaults to `false`.
+  final bool requireShiftForHorizontalScroll;
+
   /// Controls how edge-locked scroll deltas are forwarded to
   /// ancestor [Scrollable] widgets.
   ///
@@ -175,6 +187,7 @@ class _SilkyScrollState extends State<SilkyScroll>
       isVertical: widget.direction == Axis.vertical,
       edgeForwardingMode: widget.edgeForwardingMode,
       decayLogFactor: widget.decayLogFactor,
+      requireShiftForHorizontalScroll: widget.requireShiftForHorizontalScroll,
       silkyScrollGlobalManager: silkyScrollGlobalManager,
       onScroll: widget.onScroll,
       onEdgeOverScroll: widget.onEdgeOverScroll,

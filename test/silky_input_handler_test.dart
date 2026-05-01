@@ -14,6 +14,9 @@ class _FakeInputDelegate implements SilkyInputHandlerDelegate {
   @override
   bool isWebPlatform = false;
 
+  @override
+  bool requireShiftForHorizontalScroll = false;
+
   double? lastTrackpadDelta;
   double? lastTouchDragDelta;
   double? lastMouseDelta;

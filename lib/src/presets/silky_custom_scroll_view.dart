@@ -24,6 +24,7 @@ class SilkyCustomScrollView extends StatelessWidget {
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
+    this.requireShiftForHorizontalScroll = false,
     this.debugMode = false,
     this.setManualPointerDeviceKind,
     this.onScroll,
@@ -58,6 +59,7 @@ class SilkyCustomScrollView extends StatelessWidget {
   final EdgeForwardingMode edgeForwardingMode;
   final double decayLogFactor;
   final bool blockWebOverscrollBehaviorX;
+  final bool requireShiftForHorizontalScroll;
   final bool debugMode;
   final Function(PointerDeviceKind)? setManualPointerDeviceKind;
   final void Function(double)? onScroll;
@@ -100,6 +102,8 @@ class SilkyCustomScrollView extends StatelessWidget {
       decayLogFactor: cfg?.decayLogFactor ?? decayLogFactor,
       blockWebOverscrollBehaviorX:
           cfg?.blockWebOverscrollBehaviorX ?? blockWebOverscrollBehaviorX,
+      requireShiftForHorizontalScroll:
+          cfg?.requireShiftForHorizontalScroll ?? requireShiftForHorizontalScroll,
       debugMode: cfg?.debugMode ?? debugMode,
       setManualPointerDeviceKind: setManualPointerDeviceKind,
       onScroll: onScroll,

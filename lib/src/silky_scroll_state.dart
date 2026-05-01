@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'silky_scroll_global_manager.dart';
 import 'silky_scroll_config.dart';
 import 'silky_scroll_controller.dart';
@@ -50,6 +51,7 @@ class SilkyScrollState extends ChangeNotifier
     required this.edgeForwardingMode,
     required this.debugMode,
     this.decayLogFactor = kDefaultDecayLogFactor,
+    this.requireShiftForHorizontalScroll = false,
     this.onScroll,
     this.onEdgeOverScroll,
     required Function(PointerDeviceKind)? setManualPointerDeviceKind,
@@ -108,6 +110,9 @@ class SilkyScrollState extends ChangeNotifier
   bool isPlatformBouncingScrollPhysics = false;
 
   final double decayLogFactor;
+
+  /// Whether to require the Shift key to be pressed for horizontal scrolling.
+  final bool requireShiftForHorizontalScroll;
 
   late ScrollPhysics currentScrollPhysics;
   late ScrollPhysics widgetScrollPhysics;

@@ -48,6 +48,7 @@ final class SilkyScrollConfig {
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
+    this.requireShiftForHorizontalScroll = false,
     this.debugMode = false,
   });
 
@@ -90,6 +91,16 @@ final class SilkyScrollConfig {
   /// this widget is mounted. Defaults to `true`.
   final bool blockWebOverscrollBehaviorX;
 
+  /// Whether to require the Shift key to be pressed for horizontal scrolling.
+  ///
+  /// When `true` and [direction] is [Axis.horizontal], scroll events are only
+  /// processed if the Shift key is held. If Shift is not pressed, scroll events
+  /// are ignored. This is useful when you want to prevent accidental horizontal
+  /// scrolling while allowing normal vertical page scrolling.
+  ///
+  /// Defaults to `false`.
+  final bool requireShiftForHorizontalScroll;
+
   /// Enables debug logging.
   final bool debugMode;
 
@@ -112,6 +123,7 @@ final class SilkyScrollConfig {
     EdgeForwardingMode? edgeForwardingMode,
     double? decayLogFactor,
     bool? blockWebOverscrollBehaviorX,
+    bool? requireShiftForHorizontalScroll,
     bool? debugMode,
   }) {
     return SilkyScrollConfig(
@@ -128,6 +140,8 @@ final class SilkyScrollConfig {
       decayLogFactor: decayLogFactor ?? this.decayLogFactor,
       blockWebOverscrollBehaviorX:
           blockWebOverscrollBehaviorX ?? this.blockWebOverscrollBehaviorX,
+      requireShiftForHorizontalScroll:
+          requireShiftForHorizontalScroll ?? this.requireShiftForHorizontalScroll,
       debugMode: debugMode ?? this.debugMode,
     );
   }
@@ -148,6 +162,7 @@ final class SilkyScrollConfig {
           edgeForwardingMode == other.edgeForwardingMode &&
           decayLogFactor == other.decayLogFactor &&
           blockWebOverscrollBehaviorX == other.blockWebOverscrollBehaviorX &&
+          requireShiftForHorizontalScroll == other.requireShiftForHorizontalScroll &&
           debugMode == other.debugMode;
 
   @override
@@ -163,6 +178,7 @@ final class SilkyScrollConfig {
     edgeForwardingMode,
     decayLogFactor,
     blockWebOverscrollBehaviorX,
+    requireShiftForHorizontalScroll,
     debugMode,
   );
 
@@ -178,5 +194,6 @@ final class SilkyScrollConfig {
       'edgeForwardingMode: $edgeForwardingMode, '
       'decayLogFactor: $decayLogFactor, '
       'blockWebOverscrollBehaviorX: $blockWebOverscrollBehaviorX, '
+      'requireShiftForHorizontalScroll: $requireShiftForHorizontalScroll, '
       'debugMode: $debugMode)';
 }

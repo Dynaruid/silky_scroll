@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'silky_scroll_global_manager.dart';
 
 /// Callback interface used by [SilkyInputHandler] to communicate
@@ -7,6 +8,7 @@ abstract interface class SilkyInputHandlerDelegate {
   bool get isVertical;
   double get scrollSpeed;
   bool get isWebPlatform;
+  bool get requireShiftForHorizontalScroll;
 
   void handleTrackpadScroll(double delta);
   void handleTouchDragScroll(double delta);
@@ -27,11 +29,28 @@ final class SilkyInputHandler {
 
   final SilkyInputHandlerDelegate _delegate;
 
+  /// Checks if scrolling should be blocked due to missing Shift key.
+  ///
+  /// Returns `true` if the scroll should be ignored (Shift not pressed
+  /// when required in horizontal mode).
+  bool _shouldBlockScroll() {
+    if (!_delegate.requireShiftForHorizontalScroll || _delegate.isVertical) {
+      return false;
+    }
+    // In horizontal mode with shift requirement enabled
+    return !HardwareKeyboard.instance.isShiftPressed;
+  }
+
   /// Processes touch or trackpad scroll input.
   ///
   /// Routes to [handleTrackpadScroll] or [handleTouchDragScroll]
   /// based on [kind].
   void triggerTouchAction(Offset delta, PointerDeviceKind kind) {
+    // Check if Shift key is required but not pressed
+    if (_shouldBlockScroll()) {
+      return;
+    }
+
     final double scrollDelta;
     if (kind == PointerDeviceKind.trackpad && _delegate.isWebPlatform) {
       scrollDelta = _delegate.isVertical ? delta.dy : delta.dx;
@@ -50,6 +69,11 @@ final class SilkyInputHandler {
 
   /// Processes mouse-wheel scroll input.
   void triggerMouseAction(double scrollDeltaY) {
+    // Check if Shift key is required but not pressed
+    if (_shouldBlockScroll()) {
+      return;
+    }
+
     _delegate.setPointerDeviceKind(PointerDeviceKind.mouse);
     _delegate.onScroll?.call(scrollDeltaY);
     _delegate.handleMouseScroll(scrollDeltaY, _delegate.scrollSpeed);
