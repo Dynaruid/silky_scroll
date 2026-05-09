@@ -547,6 +547,10 @@ class SilkyScrollState extends ChangeNotifier
         pos.pixels <= pos.maxScrollExtent + _kExtentTolerance;
   }
 
+  bool _canAcceptUserOffset(ScrollPosition position) {
+    return position.physics.shouldAcceptUserOffset(position);
+  }
+
   /// Forwards [delta] to the nearest ancestor [Scrollable]'s
   /// [ScrollPosition] when this scrollable is edge-locked.
   ///
@@ -566,6 +570,8 @@ class SilkyScrollState extends ChangeNotifier
     }
 
     final ScrollPosition pos = ancestor.position;
+    if (!_canAcceptUserOffset(pos)) return false;
+
     // Compute the new offset, clamped to the ancestor's scroll extent.
     final double newOffset = (pos.pixels + delta).clamp(
       pos.minScrollExtent,
@@ -605,6 +611,10 @@ class SilkyScrollState extends ChangeNotifier
     }
 
     final ScrollPosition pos = ancestor.position;
+    if (!_canAcceptUserOffset(pos)) {
+      return MouseWheelForwardingResult.blockedByAncestorPhysics;
+    }
+
     if (pos is SilkyScrollPosition && pos.delegateMouseWheel(delta)) {
       return MouseWheelForwardingResult.forwarded;
     }
@@ -654,6 +664,10 @@ class SilkyScrollState extends ChangeNotifier
     onEdgeOverScroll?.call(delta);
 
     final ScrollPosition pos = ancestor.position;
+    if (!_canAcceptUserOffset(pos)) {
+      return MouseWheelForwardingResult.blockedByAncestorPhysics;
+    }
+
     if (pos is SilkyScrollPosition && pos.delegateMouseWheel(delta)) {
       return MouseWheelForwardingResult.forwarded;
     }
@@ -808,6 +822,11 @@ class SilkyScrollState extends ChangeNotifier
 
     if (_blockingState.isBlocked) {
       _setBlocked(false);
+    }
+
+    if (!clientController.hasClients ||
+        !_canAcceptUserOffset(clientController.position)) {
+      return;
     }
 
     final double scrollDelta = delta;

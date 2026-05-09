@@ -15,6 +15,10 @@ All notable changes to this project will be documented in this file.
 - **Edge forwarding with Shift**: Shift-wheel gestures stay owned by the horizontal view at its edges instead of spilling into a vertical parent scroll view.
 - **Preset widgets**: Propagate the new mouse-wheel vertical delta behavior option through `SilkyListView`, `SilkyGridView`, `SilkyCustomScrollView`, and `SilkySingleChildScrollView`.
 
+### Fixed
+
+- **Ancestor forwarding respects disabled physics**: Edge forwarding and horizontal mouse-wheel handoff no longer move an ancestor scroll view when its physics reject user scrolling, such as `NeverScrollableScrollPhysics`.
+
 ### Removed
 
 - **Internal planning docs**: Removed the mouse Shift horizontal scroll implementation plan from `docs/`.

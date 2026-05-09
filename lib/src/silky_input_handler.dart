@@ -6,6 +6,13 @@ enum MouseWheelForwardingResult {
   forwarded,
   noVerticalAncestor,
   blockedAtAncestorExtent,
+  blockedByAncestorPhysics,
+}
+
+bool _isConsumedForwardingResult(MouseWheelForwardingResult result) {
+  return result == MouseWheelForwardingResult.forwarded ||
+      result == MouseWheelForwardingResult.blockedAtAncestorExtent ||
+      result == MouseWheelForwardingResult.blockedByAncestorPhysics;
 }
 
 /// Callback interface used by [SilkyInputHandler] to communicate
@@ -85,10 +92,9 @@ final class SilkyInputHandler {
         final result = _delegate.forwardUnhandledMouseWheelVerticalDelta(
           scrollDeltaY,
         );
-        if (result == MouseWheelForwardingResult.forwarded ||
+        if (_isConsumedForwardingResult(result) ||
             behavior ==
-                MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestor ||
-            result == MouseWheelForwardingResult.blockedAtAncestorExtent) {
+                MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestor) {
           _delegate.silkyScrollGlobalManager.clearTrackpadMemory();
           return;
         }
@@ -108,8 +114,7 @@ final class SilkyInputHandler {
       final result = _delegate.forwardAlwaysMouseWheelDeltaAtEdge(
         effectiveDelta,
       );
-      if (result == MouseWheelForwardingResult.forwarded ||
-          result == MouseWheelForwardingResult.blockedAtAncestorExtent) {
+      if (_isConsumedForwardingResult(result)) {
         _delegate.silkyScrollGlobalManager.clearTrackpadMemory();
         return;
       }

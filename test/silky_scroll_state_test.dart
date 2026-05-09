@@ -612,6 +612,73 @@ void main() {
 
       state.dispose();
     });
+
+    testWidgets('edge forwarding respects disabled ancestor physics', (
+      tester,
+    ) async {
+      final parentController = ScrollController();
+      int fakeTime = 1000;
+      state = _createState(
+        manager: manager,
+        edgeLockingDelay: const Duration(milliseconds: 300),
+        clock: () => fakeTime,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            height: 300,
+            child: SingleChildScrollView(
+              controller: parentController,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(height: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      state.clientController.jumpTo(
+        state.clientController.position.maxScrollExtent,
+      );
+      await tester.pump();
+
+      state.handleTrackpadScroll(80.0);
+      fakeTime += 50;
+      state.handleTrackpadScroll(80.0);
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(state.isEdgeLocked, isTrue);
+
+      fakeTime += 20;
+      state.handleTrackpadScroll(80.0);
+      await tester.pump();
+
+      expect(parentController.offset, 0);
+      expect(
+        state.clientController.offset,
+        state.clientController.position.maxScrollExtent,
+      );
+
+      parentController.dispose();
+      state.dispose();
+    });
   });
 
   group('SilkyScrollState — horizontal mouse wheel policy', () {
@@ -768,6 +835,66 @@ void main() {
           state.clientController.position.maxScrollExtent,
         );
         expect(parentController.offset, 80);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets(
+      'always behavior respects disabled ancestor physics at horizontal edge',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          mouseWheelVerticalDeltaBehavior:
+              MouseWheelVerticalDeltaBehavior.always,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SingleChildScrollView(
+              controller: parentController,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.clientController.jumpTo(
+          state.clientController.position.maxScrollExtent,
+        );
+        await tester.pump();
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pump();
+
+        expect(
+          state.clientController.offset,
+          state.clientController.position.maxScrollExtent,
+        );
+        expect(parentController.offset, 0);
 
         parentController.dispose();
       },
@@ -934,6 +1061,56 @@ void main() {
 
         expect(state.clientController.offset, 0);
         expect(parentController.offset, 80);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets(
+      'rejected horizontal mouse vertical wheel respects disabled ancestor physics',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SingleChildScrollView(
+              controller: parentController,
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pumpAndSettle();
+
+        expect(state.clientController.offset, 0);
+        expect(parentController.offset, 0);
 
         parentController.dispose();
       },
