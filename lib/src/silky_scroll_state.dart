@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'silky_scroll_global_manager.dart';
 import 'silky_scroll_config.dart';
 import 'silky_scroll_controller.dart';
@@ -52,11 +53,16 @@ class SilkyScrollState extends ChangeNotifier
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.onScroll,
     this.onEdgeOverScroll,
+    this.mouseWheelVerticalDeltaBehavior =
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
+    bool Function()? isShiftPressed,
     required Function(PointerDeviceKind)? setManualPointerDeviceKind,
     required this.silkyScrollGlobalManager,
     required TickerProvider vsync,
     int Function()? clock,
-  }) : _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
+  }) : _isShiftPressed =
+           isShiftPressed ?? (() => HardwareKeyboard.instance.isShiftPressed),
+       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch) {
     currentScrollPhysics = DynamicBlockingScrollPhysics(
       parent: widgetScrollPhysics,
       blockingState: _blockingState,
@@ -73,6 +79,7 @@ class SilkyScrollState extends ChangeNotifier
     }
     silkyScrollController = SilkyScrollController(
       clientController: clientController,
+      onDelegatedMouseWheel: handleDelegatedMouseWheelScroll,
     );
 
     clientController.addListener(_onScrollUpdate);
@@ -140,6 +147,9 @@ class SilkyScrollState extends ChangeNotifier
   final double scrollSpeed;
   @override
   double futurePosition = 0;
+  @override
+  MouseWheelVerticalDeltaBehavior mouseWheelVerticalDeltaBehavior;
+  bool Function() _isShiftPressed;
 
   Timer? _phaseTimer;
   ScrollPhysicsPhase _physicsPhase = ScrollPhysicsPhase.normal;
@@ -251,6 +261,9 @@ class SilkyScrollState extends ChangeNotifier
   bool get isWebPlatform =>
       silkyScrollGlobalManager.silkyScrollWebManager.isWebPlatform;
 
+  @override
+  bool get isShiftPressed => _isShiftPressed();
+
   // ── Public API (delegated) ───────────────────────────────────────
 
   /// Supplies the widget [BuildContext] so that the state can find an
@@ -280,8 +293,21 @@ class SilkyScrollState extends ChangeNotifier
       _inputHandler.triggerTouchAction(delta, kind);
 
   /// Routes mouse input through [SilkyInputHandler].
-  void triggerMouseAction(double scrollDeltaY) =>
-      _inputHandler.triggerMouseAction(scrollDeltaY);
+  void triggerMouseAction(Offset scrollDelta) =>
+      _inputHandler.triggerMouseAction(scrollDelta);
+
+  /// Updates how vertical mouse-wheel deltas drive horizontal scroll without
+  /// Shift. Used when the widget option changes at runtime.
+  void setMouseWheelVerticalDeltaBehavior(
+    MouseWheelVerticalDeltaBehavior value,
+  ) {
+    mouseWheelVerticalDeltaBehavior = value;
+  }
+
+  /// Updates the Shift-key state provider.
+  void setIsShiftPressedProvider(bool Function() isShiftPressed) {
+    _isShiftPressed = isShiftPressed;
+  }
 
   /// Immediately cancels any in-progress smooth scroll animation.
   ///
@@ -558,6 +584,100 @@ class SilkyScrollState extends ChangeNotifier
     return true;
   }
 
+  /// Forwards an unhandled vertical mouse-wheel delta to a vertical ancestor.
+  ///
+  /// This is intentionally separate from edge forwarding: a horizontal
+  /// SilkyScroll that rejects a regular vertical mouse wheel should let the
+  /// surrounding vertical page scroll naturally even when edge forwarding is
+  /// configured as [EdgeForwardingMode.sameAxisOnly].
+  @override
+  MouseWheelForwardingResult forwardUnhandledMouseWheelVerticalDelta(
+    double delta,
+  ) {
+    final BuildContext? ctx = _widgetContext;
+    if (ctx == null || !ctx.mounted) {
+      return MouseWheelForwardingResult.noVerticalAncestor;
+    }
+
+    final ScrollableState? ancestor = Scrollable.maybeOf(ctx);
+    if (ancestor == null || ancestor.position.axis != Axis.vertical) {
+      return MouseWheelForwardingResult.noVerticalAncestor;
+    }
+
+    final ScrollPosition pos = ancestor.position;
+    if (pos is SilkyScrollPosition && pos.delegateMouseWheel(delta)) {
+      return MouseWheelForwardingResult.forwarded;
+    }
+
+    final double newOffset = (pos.pixels + delta).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    if ((newOffset - pos.pixels).abs().toInt() == 0) {
+      return MouseWheelForwardingResult.blockedAtAncestorExtent;
+    }
+
+    pos.jumpTo(newOffset);
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] ★ Forwarded mouse wheel delta='
+        '${delta.toStringAsFixed(1)} to vertical ancestor '
+        '(${pos.pixels.toStringAsFixed(1)}→'
+        '${newOffset.toStringAsFixed(1)})',
+      );
+    }
+    return MouseWheelForwardingResult.forwarded;
+  }
+
+  /// Forwards an `always` horizontal mouse-wheel delta to the nearest ancestor
+  /// when this scrollable is already at the edge for that delta.
+  ///
+  /// Unlike rejected regular vertical-wheel forwarding, this path is axis
+  /// agnostic: `always` means mouse wheel input first belongs to this
+  /// horizontal scrollable, then hands off to the nearest parent at the edge.
+  /// [EdgeForwardingMode.none] still disables that handoff.
+  @override
+  MouseWheelForwardingResult forwardAlwaysMouseWheelDeltaAtEdge(double delta) {
+    if (_checkOffsetAtEdge(delta) == 0 ||
+        edgeForwardingMode == EdgeForwardingMode.none) {
+      return MouseWheelForwardingResult.noVerticalAncestor;
+    }
+
+    final BuildContext? ctx = _widgetContext;
+    if (ctx == null || !ctx.mounted) {
+      return MouseWheelForwardingResult.noVerticalAncestor;
+    }
+
+    final ScrollableState? ancestor = Scrollable.maybeOf(ctx);
+    if (ancestor == null) return MouseWheelForwardingResult.noVerticalAncestor;
+
+    onEdgeOverScroll?.call(delta);
+
+    final ScrollPosition pos = ancestor.position;
+    if (pos is SilkyScrollPosition && pos.delegateMouseWheel(delta)) {
+      return MouseWheelForwardingResult.forwarded;
+    }
+
+    final double newOffset = (pos.pixels + delta).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    if ((newOffset - pos.pixels).abs().toInt() == 0) {
+      return MouseWheelForwardingResult.blockedAtAncestorExtent;
+    }
+
+    pos.jumpTo(newOffset);
+    if (debugMode) {
+      debugPrint(
+        '[SilkyScroll] ★ Forwarded always mouse wheel delta='
+        '${delta.toStringAsFixed(1)} to ancestor '
+        '(${pos.pixels.toStringAsFixed(1)}→'
+        '${newOffset.toStringAsFixed(1)})',
+      );
+    }
+    return MouseWheelForwardingResult.forwarded;
+  }
+
   // ── Shared edge-forwarding ───────────────────────────────────────
 
   /// Forwards outward deltas to the ancestor [Scrollable] when
@@ -662,6 +782,28 @@ class SilkyScrollState extends ChangeNotifier
 
   @override
   void handleMouseScroll(double delta, double scrollSpeed) {
+    _handleMouseScroll(delta, scrollSpeed);
+  }
+
+  /// Handles a mouse-wheel delta explicitly delegated from a nested child.
+  ///
+  /// The regular mouse path honors the hover stack so only the deepest hovered
+  /// SilkyScroll reacts. Delegated deltas have already been rejected by that
+  /// child, so the ancestor should run its normal smooth-scroll pipeline even
+  /// while the pointer remains over the child.
+  bool handleDelegatedMouseWheelScroll(double delta) {
+    setPointerDeviceKind(PointerDeviceKind.mouse);
+    onScroll?.call(delta);
+    _handleMouseScroll(delta, scrollSpeed, bypassHoverStack: true);
+    silkyScrollGlobalManager.clearTrackpadMemory();
+    return true;
+  }
+
+  void _handleMouseScroll(
+    double delta,
+    double scrollSpeed, {
+    bool bypassHoverStack = false,
+  }) {
     _recordDelta(delta);
 
     if (_blockingState.isBlocked) {
@@ -690,7 +832,8 @@ class SilkyScrollState extends ChangeNotifier
       return;
     }
 
-    if (silkyScrollGlobalManager.keyStack.isNotEmpty &&
+    if (!bypassHoverStack &&
+        silkyScrollGlobalManager.keyStack.isNotEmpty &&
         instanceKey != silkyScrollGlobalManager.keyStack.last) {
       return;
     }

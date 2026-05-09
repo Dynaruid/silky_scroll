@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silky_scroll/silky_scroll.dart';
@@ -72,6 +73,7 @@ void main() {
       const config = SilkyScrollConfig(
         scrollSpeed: 2.0,
         enableStretchEffect: false,
+        mouseWheelVerticalDeltaBehavior: MouseWheelVerticalDeltaBehavior.always,
       );
 
       await tester.pumpWidget(
@@ -88,6 +90,33 @@ void main() {
       );
 
       expect(find.text('Config Test'), findsOneWidget);
+      final silky = tester.widget<SilkyScroll>(find.byType(SilkyScroll));
+      expect(
+        silky.mouseWheelVerticalDeltaBehavior,
+        MouseWheelVerticalDeltaBehavior.always,
+      );
+    });
+
+    testWidgets('mouseWheelVerticalDeltaBehavior defaults to forward-or-self', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SilkyScroll(
+            builder: (context, controller, physics, _) => ListView(
+              controller: controller,
+              physics: physics,
+              children: const [Text('Default Option Test')],
+            ),
+          ),
+        ),
+      );
+
+      final silky = tester.widget<SilkyScroll>(find.byType(SilkyScroll));
+      expect(
+        silky.mouseWheelVerticalDeltaBehavior,
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
+      );
     });
 
     testWidgets('disposes without errors', (tester) async {
@@ -226,5 +255,74 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: SizedBox()));
       await tester.pump();
     });
+
+    testWidgets(
+      'Shift mouse wheel at horizontal edge does not scroll vertical ancestor',
+      (tester) async {
+        final parentController = ScrollController();
+        final horizontalController = ScrollController();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SizedBox(
+              height: 300,
+              child: SingleChildScrollView(
+                controller: parentController,
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 180,
+                      child: SilkyScroll(
+                        controller: horizontalController,
+                        direction: Axis.horizontal,
+                        isShiftPressed: () => true,
+                        builder: (context, controller, physics, _) {
+                          return ListView.builder(
+                            key: const Key('horizontal-list'),
+                            scrollDirection: Axis.horizontal,
+                            controller: controller,
+                            physics: physics,
+                            itemCount: 40,
+                            itemBuilder: (_, index) =>
+                                SizedBox(width: 100, child: Text('$index')),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 2000),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        horizontalController.jumpTo(
+          horizontalController.position.maxScrollExtent,
+        );
+        await tester.pump();
+
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: tester.getCenter(
+              find.byKey(const Key('horizontal-list')),
+            ),
+            kind: PointerDeviceKind.mouse,
+            scrollDelta: const Offset(0, 80),
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          horizontalController.offset,
+          horizontalController.position.maxScrollExtent,
+        );
+        expect(parentController.offset, 0);
+
+        await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+        horizontalController.dispose();
+        parentController.dispose();
+      },
+    );
   });
 }

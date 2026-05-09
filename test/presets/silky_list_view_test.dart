@@ -66,13 +66,19 @@ void main() {
     });
 
     testWidgets('silkyConfig overrides individual params', (tester) async {
-      const config = SilkyScrollConfig(scrollSpeed: 2.0);
+      const config = SilkyScrollConfig(
+        scrollSpeed: 2.0,
+        mouseWheelVerticalDeltaBehavior:
+            MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestor,
+      );
 
       await tester.pumpWidget(
         MaterialApp(
           home: SilkyListView.builder(
             silkyConfig: config,
             scrollSpeed: 5.0, // should be overridden by config
+            mouseWheelVerticalDeltaBehavior:
+                MouseWheelVerticalDeltaBehavior.always,
             itemCount: 3,
             itemBuilder: (_, i) => Text('$i'),
           ),
@@ -81,6 +87,32 @@ void main() {
 
       // Widget builds successfully — config takes priority
       expect(find.text('0'), findsOneWidget);
+      final silky = tester.widget<SilkyScroll>(find.byType(SilkyScroll));
+      expect(
+        silky.mouseWheelVerticalDeltaBehavior,
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestor,
+      );
+    });
+
+    testWidgets('accepts mouse wheel vertical-delta behavior parameter', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SilkyListView.builder(
+            mouseWheelVerticalDeltaBehavior:
+                MouseWheelVerticalDeltaBehavior.always,
+            itemCount: 1,
+            itemBuilder: (_, i) => Text('$i'),
+          ),
+        ),
+      );
+
+      final silky = tester.widget<SilkyScroll>(find.byType(SilkyScroll));
+      expect(
+        silky.mouseWheelVerticalDeltaBehavior,
+        MouseWheelVerticalDeltaBehavior.always,
+      );
     });
 
     testWidgets('passes scrollDirection and reverse', (tester) async {

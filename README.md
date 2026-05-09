@@ -214,6 +214,51 @@ SilkyScroll.fromConfig(
 
 ---
 
+## Horizontal Mouse Wheel Behavior
+
+For horizontal `SilkyScroll` widgets, regular mouse-wheel vertical deltas are
+forwarded to a vertical parent scroll view when one is the nearest scrollable
+ancestor. If there is no vertical parent, the horizontal scroll view handles the
+wheel itself. That keeps standalone horizontal lists and horizontal-in-
+horizontal lists usable, while vertical pages still scroll naturally. Touch and
+trackpad scrolling keep their native behavior.
+
+Holding Shift turns a mouse-wheel delta into an explicit horizontal-scroll
+command. In that mode, the horizontal `SilkyScroll` owns the wheel signal even
+at its start or end edge, so the same Shift-wheel gesture does not spill into a
+vertical parent scroll view.
+
+Use `mouseWheelVerticalDeltaBehavior` to tune this policy:
+
+```dart
+SilkyScroll(
+  direction: Axis.horizontal,
+  mouseWheelVerticalDeltaBehavior: MouseWheelVerticalDeltaBehavior.always,
+  builder: (context, controller, physics, pointerDeviceKind) => ListView(
+    scrollDirection: Axis.horizontal,
+    controller: controller,
+    physics: physics,
+    children: [...],
+  ),
+)
+```
+
+Available values:
+
+- `forwardToVerticalAncestorOrSelf` (default): vertical parent first, otherwise self
+- `forwardToVerticalAncestor`: vertical parent only
+- `always`: always scroll this horizontal view
+- `shiftOnly`: ignore vertical wheel deltas unless Shift is pressed
+
+With `always`, mouse-wheel input is owned by the horizontal view first,
+regardless of wheel delta axis. Without Shift, when that horizontal view is
+already at the start or end edge, the wheel delta is handed to the nearest
+parent scroll view, regardless of the parent's axis. Holding Shift keeps the
+gesture locked to the horizontal view even at the edge. Set
+`edgeForwardingMode` to `EdgeForwardingMode.none` to prevent this edge handoff.
+
+---
+
 ## Web: Overscroll Behavior Control
 
 On web, `SilkyScroll` automatically sets `overscroll-behavior-x: none` while the widget is mounted (controlled by the `blockWebOverscrollBehaviorX` parameter, default `true`). This blocks browser back/forward swipe gestures.
@@ -254,24 +299,25 @@ The actual CSS is set to `none` when **any** widget requests blocking **or** the
 
 ## Parameters
 
-| Parameter                     | Type                 | Default                           | Description                       |
-| ----------------------------- | -------------------- | --------------------------------- | --------------------------------- |
-| `controller`                  | `ScrollController?`  | `null`                            | External scroll controller        |
-| `silkyScrollDuration`         | `Duration`           | `1600ms`                          | Scroll animation duration         |
-| `scrollSpeed`                 | `double`             | `1`                               | Scroll speed multiplier           |
-| `animationCurve`              | `Curve`              | `Curves.easeOutCirc`              | Animation curve                   |
-| `direction`                   | `Axis`               | `vertical`                        | Scroll direction                  |
-| `physics`                     | `ScrollPhysics`      | `ScrollPhysics()`                 | Scroll physics                    |
-| `edgeLockingDelay`            | `Duration`           | `650ms`                           | Lock delay after reaching edge    |
-| `overScrollingLockingDelay`   | `Duration`           | `700ms`                           | Overscroll lock delay             |
-| `enableStretchEffect`         | `bool`               | `true`                            | Overscroll stretch effect         |
-| `edgeForwardingMode`          | `EdgeForwardingMode` | `EdgeForwardingMode.sameAxisOnly` | Edge delta forwarding to ancestor |
-| `decayLogFactor`              | `double`             | `12`                              | Smooth-scroll convergence speed   |
-| `blockWebOverscrollBehaviorX` | `bool`               | `true`                            | Block browser swipe on web        |
-| `setManualPointerDeviceKind`  | `Function?`          | `null`                            | Manual pointer device override    |
-| `onScroll`                    | `Function(double)?`  | `null`                            | Scroll event callback             |
-| `onEdgeOverScroll`            | `Function(double)?`  | `null`                            | Edge overscroll callback          |
-| `debugMode`                   | `bool`               | `false`                           | Debug logging                     |
+| Parameter                         | Type                              | Default                           | Description                                                    |
+| --------------------------------- | --------------------------------- | --------------------------------- | -------------------------------------------------------------- |
+| `controller`                      | `ScrollController?`               | `null`                            | External scroll controller                                     |
+| `silkyScrollDuration`             | `Duration`                        | `1600ms`                          | Scroll animation duration                                      |
+| `scrollSpeed`                     | `double`                          | `1`                               | Scroll speed multiplier                                        |
+| `animationCurve`                  | `Curve`                           | `Curves.easeOutCirc`              | Animation curve                                                |
+| `direction`                       | `Axis`                            | `vertical`                        | Scroll direction                                               |
+| `physics`                         | `ScrollPhysics`                   | `ScrollPhysics()`                 | Scroll physics                                                 |
+| `edgeLockingDelay`                | `Duration`                        | `650ms`                           | Lock delay after reaching edge                                 |
+| `overScrollingLockingDelay`       | `Duration`                        | `700ms`                           | Overscroll lock delay                                          |
+| `enableStretchEffect`             | `bool`                            | `true`                            | Overscroll stretch effect                                      |
+| `edgeForwardingMode`              | `EdgeForwardingMode`              | `EdgeForwardingMode.sameAxisOnly` | Edge delta forwarding to ancestor                              |
+| `mouseWheelVerticalDeltaBehavior` | `MouseWheelVerticalDeltaBehavior` | `forwardToVerticalAncestorOrSelf` | Shift-free vertical mouse wheel behavior for horizontal scroll |
+| `decayLogFactor`                  | `double`                          | `12`                              | Smooth-scroll convergence speed                                |
+| `blockWebOverscrollBehaviorX`     | `bool`                            | `true`                            | Block browser swipe on web                                     |
+| `setManualPointerDeviceKind`      | `Function?`                       | `null`                            | Manual pointer device override                                 |
+| `onScroll`                        | `Function(double)?`               | `null`                            | Scroll event callback                                          |
+| `onEdgeOverScroll`                | `Function(double)?`               | `null`                            | Edge overscroll callback                                       |
+| `debugMode`                       | `bool`                            | `false`                           | Debug logging                                                  |
 
 ---
 

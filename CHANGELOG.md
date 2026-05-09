@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.2
+
+### Added
+
+- **Shift-wheel horizontal scrolling**: Holding Shift now turns vertical mouse-wheel input into an explicit horizontal-scroll command for horizontal `SilkyScroll` widgets.
+- **`MouseWheelVerticalDeltaBehavior`**: Added configuration for how horizontal scroll views handle vertical mouse-wheel deltas without Shift (`forwardToVerticalAncestorOrSelf`, `forwardToVerticalAncestor`, `always`, `shiftOnly`).
+
+### Changed
+
+- **Horizontal mouse-wheel forwarding**: Horizontal `SilkyScroll` widgets now prefer vertical ancestor scrolling for regular mouse-wheel deltas, while standalone horizontal views can still handle the wheel themselves.
+- **Edge forwarding with Shift**: Shift-wheel gestures stay owned by the horizontal view at its edges instead of spilling into a vertical parent scroll view.
+- **Preset widgets**: Propagate the new mouse-wheel vertical delta behavior option through `SilkyListView`, `SilkyGridView`, `SilkyCustomScrollView`, and `SilkySingleChildScrollView`.
+
+### Removed
+
+- **Internal planning docs**: Removed the mouse Shift horizontal scroll implementation plan from `docs/`.
+
 ## 2.6.1
 
 ### Changed

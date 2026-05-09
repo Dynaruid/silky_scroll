@@ -15,7 +15,7 @@ export 'src/blocked_scroll_physics.dart'
         DynamicBlockingScrollPhysics,
         ScrollBlockingState;
 export 'src/silky_scroll_config.dart'
-    show SilkyScrollConfig, EdgeForwardingMode;
+    show SilkyScrollConfig, EdgeForwardingMode, MouseWheelVerticalDeltaBehavior;
 export 'src/silky_scroll_state.dart' show ScrollPhysicsPhase;
 export 'src/scroll_delta_sample.dart' show ScrollDeltaSample;
 export 'src/scroll_delta_sample_analyzer.dart' show ScrollDeltaSampleAnalyzer;

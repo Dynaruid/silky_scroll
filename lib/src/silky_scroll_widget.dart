@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'silky_scroll_animator.dart';
 import 'silky_scroll_config.dart';
 import 'silky_scroll_global_manager.dart';
@@ -33,9 +34,12 @@ class SilkyScroll extends StatefulWidget {
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
+    this.mouseWheelVerticalDeltaBehavior =
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
+    this.isShiftPressed,
     this.setManualPointerDeviceKind,
     this.onScroll,
     this.onEdgeOverScroll,
@@ -50,6 +54,7 @@ class SilkyScroll extends StatefulWidget {
     super.key,
     required SilkyScrollConfig config,
     this.controller,
+    this.isShiftPressed,
     this.setManualPointerDeviceKind,
     this.onScroll,
     this.onEdgeOverScroll,
@@ -63,6 +68,7 @@ class SilkyScroll extends StatefulWidget {
        overScrollingLockingDelay = config.overScrollingLockingDelay,
        enableStretchEffect = config.enableStretchEffect,
        edgeForwardingMode = config.edgeForwardingMode,
+       mouseWheelVerticalDeltaBehavior = config.mouseWheelVerticalDeltaBehavior,
        decayLogFactor = config.decayLogFactor,
        blockWebOverscrollBehaviorX = config.blockWebOverscrollBehaviorX,
        debugMode = config.debugMode;
@@ -137,6 +143,10 @@ class SilkyScroll extends StatefulWidget {
   /// entirely.
   final EdgeForwardingMode edgeForwardingMode;
 
+  /// How a horizontal scrollable handles regular vertical mouse-wheel deltas
+  /// when Shift is not pressed.
+  final MouseWheelVerticalDeltaBehavior mouseWheelVerticalDeltaBehavior;
+
   /// Called on every scroll delta (both mouse and touch).
   final void Function(double delta)? onScroll;
 
@@ -145,6 +155,12 @@ class SilkyScroll extends StatefulWidget {
 
   /// Allows manually overriding the detected pointer device kind.
   final Function(PointerDeviceKind)? setManualPointerDeviceKind;
+
+  /// Provides the current Shift key state.
+  ///
+  /// Defaults to [HardwareKeyboard.instance.isShiftPressed]. This exists so
+  /// widget tests can provide deterministic modifier-key state.
+  final bool Function()? isShiftPressed;
 
   /// Enables debug logging. Defaults to `false`.
   final bool debugMode;
@@ -174,6 +190,8 @@ class _SilkyScrollState extends State<SilkyScroll>
       setManualPointerDeviceKind: widget.setManualPointerDeviceKind,
       isVertical: widget.direction == Axis.vertical,
       edgeForwardingMode: widget.edgeForwardingMode,
+      mouseWheelVerticalDeltaBehavior: widget.mouseWheelVerticalDeltaBehavior,
+      isShiftPressed: widget.isShiftPressed,
       decayLogFactor: widget.decayLogFactor,
       silkyScrollGlobalManager: silkyScrollGlobalManager,
       onScroll: widget.onScroll,
@@ -193,6 +211,17 @@ class _SilkyScrollState extends State<SilkyScroll>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.physics != widget.physics) {
       silkyScrollState.setWidgetScrollPhysics(scrollPhysics: widget.physics);
+    }
+    if (oldWidget.mouseWheelVerticalDeltaBehavior !=
+        widget.mouseWheelVerticalDeltaBehavior) {
+      silkyScrollState.setMouseWheelVerticalDeltaBehavior(
+        widget.mouseWheelVerticalDeltaBehavior,
+      );
+    }
+    if (oldWidget.isShiftPressed != widget.isShiftPressed) {
+      silkyScrollState.setIsShiftPressedProvider(
+        widget.isShiftPressed ?? () => HardwareKeyboard.instance.isShiftPressed,
+      );
     }
     if (oldWidget.blockWebOverscrollBehaviorX !=
         widget.blockWebOverscrollBehaviorX) {
@@ -264,7 +293,15 @@ class _SilkyScrollState extends State<SilkyScroll>
 
     // ── Step 2: Heuristic — horizontal delta or tiny vertical delta → trackpad ──
     // ★ Runs before timer checks → detects device switch immediately ★
-    if (scrollDeltaX.abs() >= 0.1 || scrollDeltaY.abs() < 4) {
+    final bool horizontalMouseWheel =
+        signalEvent.kind == PointerDeviceKind.mouse &&
+        widget.direction == Axis.horizontal &&
+        (silkyScrollState.isShiftPressed ||
+            widget.mouseWheelVerticalDeltaBehavior ==
+                MouseWheelVerticalDeltaBehavior.always) &&
+        scrollDeltaX.abs() >= 0.1;
+    if (!horizontalMouseWheel &&
+        (scrollDeltaX.abs() >= 0.1 || scrollDeltaY.abs() < 4)) {
       _handleTrackpadCheck(PointerDeviceKind.trackpad);
       _ensureTrackpadMode();
       silkyScrollState.triggerTouchAction(
@@ -300,8 +337,26 @@ class _SilkyScrollState extends State<SilkyScroll>
     }
 
     // ── Step 4: Treat as mouse ──
+    if (_shouldOwnHorizontalMouseWheel(signalEvent)) {
+      _ownPointerSignal(signalEvent);
+    }
     _updateDeviceKind(PointerDeviceKind.mouse);
-    silkyScrollState.triggerMouseAction(scrollDeltaY);
+    silkyScrollState.triggerMouseAction(signalEvent.scrollDelta);
+  }
+
+  bool _shouldOwnHorizontalMouseWheel(PointerScrollEvent event) {
+    if (widget.direction != Axis.horizontal ||
+        event.kind != PointerDeviceKind.mouse ||
+        (!silkyScrollState.isShiftPressed &&
+            widget.mouseWheelVerticalDeltaBehavior !=
+                MouseWheelVerticalDeltaBehavior.always)) {
+      return false;
+    }
+    return event.scrollDelta.dx.abs() > 0 || event.scrollDelta.dy.abs() > 0;
+  }
+
+  void _ownPointerSignal(PointerScrollEvent event) {
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {});
   }
 
   /// Cancel any in-progress mouse animation when switching to trackpad mode.

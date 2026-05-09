@@ -26,6 +26,8 @@ class SilkyGridView extends StatelessWidget {
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
+    this.mouseWheelVerticalDeltaBehavior =
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
@@ -74,6 +76,8 @@ class SilkyGridView extends StatelessWidget {
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
+    this.mouseWheelVerticalDeltaBehavior =
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
@@ -123,6 +127,8 @@ class SilkyGridView extends StatelessWidget {
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
+    this.mouseWheelVerticalDeltaBehavior =
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
@@ -174,6 +180,8 @@ class SilkyGridView extends StatelessWidget {
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
+    this.mouseWheelVerticalDeltaBehavior =
+        MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
@@ -223,6 +231,7 @@ class SilkyGridView extends StatelessWidget {
   final Duration overScrollingLockingDelay;
   final bool enableStretchEffect;
   final EdgeForwardingMode edgeForwardingMode;
+  final MouseWheelVerticalDeltaBehavior mouseWheelVerticalDeltaBehavior;
   final double decayLogFactor;
   final bool blockWebOverscrollBehaviorX;
   final bool debugMode;
@@ -279,6 +288,9 @@ class SilkyGridView extends StatelessWidget {
           cfg?.overScrollingLockingDelay ?? overScrollingLockingDelay,
       enableStretchEffect: cfg?.enableStretchEffect ?? enableStretchEffect,
       edgeForwardingMode: cfg?.edgeForwardingMode ?? edgeForwardingMode,
+      mouseWheelVerticalDeltaBehavior:
+          cfg?.mouseWheelVerticalDeltaBehavior ??
+          mouseWheelVerticalDeltaBehavior,
       decayLogFactor: cfg?.decayLogFactor ?? decayLogFactor,
       blockWebOverscrollBehaviorX:
           cfg?.blockWebOverscrollBehaviorX ?? blockWebOverscrollBehaviorX,
