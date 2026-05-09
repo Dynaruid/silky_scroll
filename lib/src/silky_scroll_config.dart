@@ -16,6 +16,30 @@ enum EdgeForwardingMode {
   always,
 }
 
+/// Controls how a horizontal [SilkyScroll] handles a regular mouse wheel's
+/// vertical delta when Shift is not pressed.
+enum MouseWheelVerticalDeltaBehavior {
+  /// Ignore the vertical wheel delta. Shift is required for vertical wheel
+  /// input to drive horizontal scrolling.
+  shiftOnly,
+
+  /// Always use the vertical wheel delta to scroll this horizontal scrollable.
+  always,
+
+  /// Forward the vertical wheel delta to the nearest vertical ancestor
+  /// scrollable. If no such ancestor is the nearest scrollable, ignore it.
+  forwardToVerticalAncestor,
+
+  /// Forward to the nearest vertical ancestor when possible; otherwise scroll
+  /// this horizontal scrollable. This is the default because it preserves
+  /// natural page scrolling while keeping standalone and horizontal-in-
+  /// horizontal scrollables usable with a mouse wheel.
+  forwardToVerticalAncestorOrSelf,
+}
+
+const MouseWheelVerticalDeltaBehavior _kDefaultMouseWheelVerticalDeltaBehavior =
+    MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf;
+
 /// Configuration data class that groups [SilkyScroll] scroll-behavior
 /// parameters into a single object.
 ///
@@ -46,6 +70,8 @@ final class SilkyScrollConfig {
     this.overScrollingLockingDelay = const Duration(milliseconds: 700),
     this.enableStretchEffect = true,
     this.edgeForwardingMode = EdgeForwardingMode.sameAxisOnly,
+    this.mouseWheelVerticalDeltaBehavior =
+        _kDefaultMouseWheelVerticalDeltaBehavior,
     this.decayLogFactor = kDefaultDecayLogFactor,
     this.blockWebOverscrollBehaviorX = true,
     this.debugMode = false,
@@ -81,6 +107,10 @@ final class SilkyScrollConfig {
   /// entirely.
   final EdgeForwardingMode edgeForwardingMode;
 
+  /// How a horizontal scrollable handles regular vertical mouse-wheel deltas
+  /// when Shift is not pressed.
+  final MouseWheelVerticalDeltaBehavior mouseWheelVerticalDeltaBehavior;
+
   /// Exponential-decay log factor for the smooth-scroll animation.
   final double decayLogFactor;
 
@@ -110,6 +140,7 @@ final class SilkyScrollConfig {
     Duration? overScrollingLockingDelay,
     bool? enableStretchEffect,
     EdgeForwardingMode? edgeForwardingMode,
+    MouseWheelVerticalDeltaBehavior? mouseWheelVerticalDeltaBehavior,
     double? decayLogFactor,
     bool? blockWebOverscrollBehaviorX,
     bool? debugMode,
@@ -125,6 +156,9 @@ final class SilkyScrollConfig {
           overScrollingLockingDelay ?? this.overScrollingLockingDelay,
       enableStretchEffect: enableStretchEffect ?? this.enableStretchEffect,
       edgeForwardingMode: edgeForwardingMode ?? this.edgeForwardingMode,
+      mouseWheelVerticalDeltaBehavior:
+          mouseWheelVerticalDeltaBehavior ??
+          this.mouseWheelVerticalDeltaBehavior,
       decayLogFactor: decayLogFactor ?? this.decayLogFactor,
       blockWebOverscrollBehaviorX:
           blockWebOverscrollBehaviorX ?? this.blockWebOverscrollBehaviorX,
@@ -146,6 +180,8 @@ final class SilkyScrollConfig {
           overScrollingLockingDelay == other.overScrollingLockingDelay &&
           enableStretchEffect == other.enableStretchEffect &&
           edgeForwardingMode == other.edgeForwardingMode &&
+          mouseWheelVerticalDeltaBehavior ==
+              other.mouseWheelVerticalDeltaBehavior &&
           decayLogFactor == other.decayLogFactor &&
           blockWebOverscrollBehaviorX == other.blockWebOverscrollBehaviorX &&
           debugMode == other.debugMode;
@@ -161,6 +197,7 @@ final class SilkyScrollConfig {
     overScrollingLockingDelay,
     enableStretchEffect,
     edgeForwardingMode,
+    mouseWheelVerticalDeltaBehavior,
     decayLogFactor,
     blockWebOverscrollBehaviorX,
     debugMode,
@@ -176,6 +213,7 @@ final class SilkyScrollConfig {
       'edgeLockingDelay: $edgeLockingDelay, '
       'enableStretchEffect: $enableStretchEffect, '
       'edgeForwardingMode: $edgeForwardingMode, '
+      'mouseWheelVerticalDeltaBehavior: $mouseWheelVerticalDeltaBehavior, '
       'decayLogFactor: $decayLogFactor, '
       'blockWebOverscrollBehaviorX: $blockWebOverscrollBehaviorX, '
       'debugMode: $debugMode)';

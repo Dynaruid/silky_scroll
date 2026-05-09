@@ -39,7 +39,10 @@ void main() {
     });
 
     testWidgets('silkyConfig overrides individual params', (tester) async {
-      const config = SilkyScrollConfig(scrollSpeed: 2.0);
+      const config = SilkyScrollConfig(
+        scrollSpeed: 2.0,
+        mouseWheelVerticalDeltaBehavior: MouseWheelVerticalDeltaBehavior.always,
+      );
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -52,6 +55,31 @@ void main() {
       );
 
       expect(find.text('Configured'), findsOneWidget);
+      final silky = tester.widget<SilkyScroll>(find.byType(SilkyScroll));
+      expect(
+        silky.mouseWheelVerticalDeltaBehavior,
+        MouseWheelVerticalDeltaBehavior.always,
+      );
+    });
+
+    testWidgets('accepts mouse wheel vertical-delta behavior parameter', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SilkySingleChildScrollView(
+            mouseWheelVerticalDeltaBehavior:
+                MouseWheelVerticalDeltaBehavior.always,
+            child: Text('Opt in'),
+          ),
+        ),
+      );
+
+      final silky = tester.widget<SilkyScroll>(find.byType(SilkyScroll));
+      expect(
+        silky.mouseWheelVerticalDeltaBehavior,
+        MouseWheelVerticalDeltaBehavior.always,
+      );
     });
 
     testWidgets('passes scrollDirection and padding', (tester) async {

@@ -7,9 +7,13 @@ import 'package:flutter/material.dart';
 /// position management to the user-supplied (or auto-created)
 /// [clientController] so that offsets stay in sync.
 final class SilkyScrollController extends ScrollController {
-  SilkyScrollController({required this.clientController});
+  SilkyScrollController({
+    required this.clientController,
+    this.onDelegatedMouseWheel,
+  });
 
   late final ScrollController clientController;
+  final bool Function(double delta)? onDelegatedMouseWheel;
 
   SilkyScrollPosition? currentSilkyScrollPosition;
 
@@ -30,6 +34,7 @@ final class SilkyScrollController extends ScrollController {
       context: context,
       oldPosition: oldPosition,
       initialPixels: initialScrollOffset,
+      onDelegatedMouseWheel: onDelegatedMouseWheel,
     );
     return currentSilkyScrollPosition!;
   }
@@ -64,9 +69,11 @@ final class SilkyScrollPosition extends ScrollPositionWithSingleContext {
     required super.context,
     super.oldPosition,
     required double super.initialPixels,
+    this.onDelegatedMouseWheel,
   });
 
   PointerDeviceKind kind = PointerDeviceKind.trackpad;
+  final bool Function(double delta)? onDelegatedMouseWheel;
 
   /// When `true`, [goBallistic] is suppressed to prevent Flutter's
   /// physics-based spring simulation from fighting with the
@@ -118,5 +125,11 @@ final class SilkyScrollPosition extends ScrollPositionWithSingleContext {
 
       return;
     }
+  }
+
+  bool delegateMouseWheel(double delta) {
+    final handler = onDelegatedMouseWheel;
+    if (handler == null) return false;
+    return handler(delta);
   }
 }

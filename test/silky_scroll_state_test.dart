@@ -27,6 +27,24 @@ Widget _buildScrollable({
   );
 }
 
+Widget _buildHorizontalScrollable({
+  required ScrollController controller,
+  int itemCount = 50,
+  double itemWidth = 100,
+}) {
+  return MaterialApp(
+    home: SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        controller: controller,
+        itemCount: itemCount,
+        itemBuilder: (_, i) => SizedBox(width: itemWidth, child: Text('$i')),
+      ),
+    ),
+  );
+}
+
 SilkyScrollState _createState({
   ScrollController? scrollController,
   ScrollPhysics physics = const ScrollPhysics(),
@@ -40,6 +58,9 @@ SilkyScrollState _createState({
   SilkyScrollGlobalManager? manager,
   TickerProvider? vsync,
   int Function()? clock,
+  MouseWheelVerticalDeltaBehavior mouseWheelVerticalDeltaBehavior =
+      MouseWheelVerticalDeltaBehavior.forwardToVerticalAncestorOrSelf,
+  bool Function()? isShiftPressed,
 }) {
   manager ??= SilkyScrollGlobalManager.instance;
   return SilkyScrollState(
@@ -51,6 +72,8 @@ SilkyScrollState _createState({
     animationCurve: animationCurve,
     isVertical: isVertical,
     edgeForwardingMode: edgeForwardingMode,
+    mouseWheelVerticalDeltaBehavior: mouseWheelVerticalDeltaBehavior,
+    isShiftPressed: isShiftPressed,
     debugMode: debugMode,
     setManualPointerDeviceKind: null,
     silkyScrollGlobalManager: manager,
@@ -588,6 +611,472 @@ void main() {
       expect(state.isScrollBlocked, isFalse);
 
       state.dispose();
+    });
+  });
+
+  group('SilkyScrollState — horizontal mouse wheel policy', () {
+    late SilkyScrollState state;
+    late SilkyScrollGlobalManager manager;
+
+    setUp(() {
+      manager = SilkyScrollGlobalManager.instance;
+      manager.resetForTesting();
+    });
+
+    tearDown(() {
+      if (!state.isDisposed) {
+        state.dispose();
+      }
+      manager.resetForTesting();
+    });
+
+    testWidgets(
+      'default horizontal mouse vertical wheel without ancestor scrolls self',
+      (tester) async {
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+        await tester.pumpWidget(
+          _buildHorizontalScrollable(controller: state.clientController),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pumpAndSettle();
+
+        expect(state.clientController.offset, greaterThan(0));
+      },
+    );
+
+    testWidgets(
+      'shiftOnly horizontal mouse vertical wheel without Shift is ignored',
+      (tester) async {
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          mouseWheelVerticalDeltaBehavior:
+              MouseWheelVerticalDeltaBehavior.shiftOnly,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+        await tester.pumpWidget(
+          _buildHorizontalScrollable(controller: state.clientController),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pumpAndSettle();
+
+        expect(state.clientController.offset, 0);
+      },
+    );
+
+    testWidgets(
+      'horizontal mouse vertical wheel with Shift scrolls internally',
+      (tester) async {
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          isShiftPressed: () => true,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+        await tester.pumpWidget(
+          _buildHorizontalScrollable(controller: state.clientController),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pumpAndSettle();
+
+        expect(state.clientController.offset, greaterThan(0));
+      },
+    );
+
+    testWidgets(
+      'always behavior lets horizontal mouse vertical wheel scroll internally',
+      (tester) async {
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          mouseWheelVerticalDeltaBehavior:
+              MouseWheelVerticalDeltaBehavior.always,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+        await tester.pumpWidget(
+          _buildHorizontalScrollable(controller: state.clientController),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pumpAndSettle();
+
+        expect(state.clientController.offset, greaterThan(0));
+      },
+    );
+
+    testWidgets(
+      'always behavior forwards mouse wheel at horizontal edge to any ancestor axis',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          mouseWheelVerticalDeltaBehavior:
+              MouseWheelVerticalDeltaBehavior.always,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SingleChildScrollView(
+              controller: parentController,
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.clientController.jumpTo(
+          state.clientController.position.maxScrollExtent,
+        );
+        await tester.pump();
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pump();
+
+        expect(
+          state.clientController.offset,
+          state.clientController.position.maxScrollExtent,
+        );
+        expect(parentController.offset, 80);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets(
+      'always behavior with Shift does not forward mouse wheel at horizontal edge',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          mouseWheelVerticalDeltaBehavior:
+              MouseWheelVerticalDeltaBehavior.always,
+          isShiftPressed: () => true,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SingleChildScrollView(
+              controller: parentController,
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.clientController.jumpTo(
+          state.clientController.position.maxScrollExtent,
+        );
+        await tester.pump();
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pump();
+
+        expect(
+          state.clientController.offset,
+          state.clientController.position.maxScrollExtent,
+        );
+        expect(parentController.offset, 0);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets(
+      'always behavior does not forward mouse wheel when edge forwarding is disabled',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          edgeForwardingMode: EdgeForwardingMode.none,
+          mouseWheelVerticalDeltaBehavior:
+              MouseWheelVerticalDeltaBehavior.always,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SingleChildScrollView(
+              controller: parentController,
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.clientController.jumpTo(
+          state.clientController.position.maxScrollExtent,
+        );
+        await tester.pump();
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pump();
+
+        expect(
+          state.clientController.offset,
+          state.clientController.position.maxScrollExtent,
+        );
+        expect(parentController.offset, 0);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets(
+      'rejected horizontal mouse vertical wheel forwards to vertical ancestor',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          isShiftPressed: () => false,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SingleChildScrollView(
+              controller: parentController,
+              child: Column(
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pump();
+
+        expect(state.clientController.offset, 0);
+        expect(parentController.offset, 80);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets(
+      'rejected horizontal mouse vertical wheel delegates to silky ancestor',
+      (tester) async {
+        final parentState = _createState(
+          manager: manager,
+          isVertical: true,
+          silkyScrollDuration: const Duration(milliseconds: 700),
+        );
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          isShiftPressed: () => false,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SizedBox(
+              height: 300,
+              child: ListView(
+                controller: parentState.silkyScrollController,
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.silkyScrollController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        manager.enteredKey(parentState.instanceKey);
+        manager.enteredKey(state.instanceKey);
+
+        state.triggerMouseAction(const Offset(0, 80));
+
+        expect(state.clientController.offset, 0);
+        expect(parentState.clientController.offset, 0);
+        expect(parentState.isOnSilkyScrolling, isTrue);
+
+        await tester.pump(const Duration(milliseconds: 16));
+
+        expect(state.clientController.offset, 0);
+        expect(parentState.clientController.offset, greaterThan(0));
+        expect(parentState.clientController.offset, lessThan(80));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        parentState.dispose();
+      },
+    );
+
+    testWidgets(
+      'default horizontal mouse vertical wheel inside horizontal ancestor scrolls self',
+      (tester) async {
+        final parentController = ScrollController();
+        state = _createState(
+          manager: manager,
+          isVertical: false,
+          isShiftPressed: () => false,
+          silkyScrollDuration: const Duration(milliseconds: 100),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: SizedBox(
+              height: 220,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                controller: parentController,
+                children: [
+                  Builder(
+                    builder: (context) {
+                      state.widgetContext = context;
+                      return SizedBox(
+                        width: 300,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          controller: state.clientController,
+                          itemCount: 50,
+                          itemBuilder: (_, i) =>
+                              SizedBox(width: 100, child: Text('$i')),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 1000),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        state.triggerMouseAction(const Offset(0, 80));
+        await tester.pumpAndSettle();
+
+        expect(state.clientController.offset, greaterThan(0));
+        expect(parentController.offset, 0);
+
+        parentController.dispose();
+      },
+    );
+
+    testWidgets('runtime option update is applied immediately', (tester) async {
+      state = _createState(
+        manager: manager,
+        isVertical: false,
+        mouseWheelVerticalDeltaBehavior:
+            MouseWheelVerticalDeltaBehavior.shiftOnly,
+        isShiftPressed: () => false,
+        silkyScrollDuration: const Duration(milliseconds: 100),
+      );
+      await tester.pumpWidget(
+        _buildHorizontalScrollable(controller: state.clientController),
+      );
+
+      state.triggerMouseAction(const Offset(0, 80));
+      await tester.pumpAndSettle();
+      expect(state.clientController.offset, 0);
+
+      state.setMouseWheelVerticalDeltaBehavior(
+        MouseWheelVerticalDeltaBehavior.always,
+      );
+      state.triggerMouseAction(const Offset(0, 80));
+      await tester.pumpAndSettle();
+
+      expect(state.clientController.offset, greaterThan(0));
     });
   });
 
