@@ -107,6 +107,7 @@ class _HorizontalScrollPageState extends State<HorizontalScrollPage> {
           bottom: const TabBar(isScrollable: true, tabs: _tabs),
         ),
         body: TabBarView(
+          physics: const NeverScrollableScrollPhysics(),
           children: [
             _StandaloneTab(
               stretch: _stretch,
