@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../silky_scroll_animator.dart';
 import '../silky_scroll_config.dart';
@@ -46,6 +47,7 @@ class SilkyListView extends StatelessWidget {
     this.addRepaintBoundaries = true,
     this.addSemanticIndexes = true,
     this.cacheExtent,
+    this.scrollCacheExtent,
     this.semanticChildCount,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -91,6 +93,7 @@ class SilkyListView extends StatelessWidget {
     this.addRepaintBoundaries = true,
     this.addSemanticIndexes = true,
     this.cacheExtent,
+    this.scrollCacheExtent,
     this.semanticChildCount,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -136,6 +139,7 @@ class SilkyListView extends StatelessWidget {
     this.addRepaintBoundaries = true,
     this.addSemanticIndexes = true,
     this.cacheExtent,
+    this.scrollCacheExtent,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
     this.restorationId,
@@ -187,6 +191,7 @@ class SilkyListView extends StatelessWidget {
   final bool addRepaintBoundaries;
   final bool addSemanticIndexes;
   final double? cacheExtent;
+  final ScrollCacheExtent? scrollCacheExtent;
   final int? semanticChildCount;
   final DragStartBehavior dragStartBehavior;
   final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
@@ -206,6 +211,9 @@ class SilkyListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cfg = silkyConfig;
     final effectiveDirection = cfg?.direction ?? scrollDirection;
+    final effectiveScrollCacheExtent =
+        scrollCacheExtent ??
+        (cacheExtent == null ? null : ScrollCacheExtent.pixels(cacheExtent!));
 
     return SilkyScroll(
       controller: controller,
@@ -249,7 +257,7 @@ class SilkyListView extends StatelessWidget {
             addAutomaticKeepAlives: addAutomaticKeepAlives,
             addRepaintBoundaries: addRepaintBoundaries,
             addSemanticIndexes: addSemanticIndexes,
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: effectiveScrollCacheExtent,
             semanticChildCount: semanticChildCount,
             dragStartBehavior: dragStartBehavior,
             keyboardDismissBehavior: keyboardDismissBehavior,
@@ -269,7 +277,7 @@ class SilkyListView extends StatelessWidget {
             addAutomaticKeepAlives: addAutomaticKeepAlives,
             addRepaintBoundaries: addRepaintBoundaries,
             addSemanticIndexes: addSemanticIndexes,
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: effectiveScrollCacheExtent,
             semanticChildCount: semanticChildCount,
             dragStartBehavior: dragStartBehavior,
             keyboardDismissBehavior: keyboardDismissBehavior,
@@ -289,7 +297,7 @@ class SilkyListView extends StatelessWidget {
             addAutomaticKeepAlives: addAutomaticKeepAlives,
             addRepaintBoundaries: addRepaintBoundaries,
             addSemanticIndexes: addSemanticIndexes,
-            cacheExtent: cacheExtent,
+            scrollCacheExtent: effectiveScrollCacheExtent,
             dragStartBehavior: dragStartBehavior,
             keyboardDismissBehavior: keyboardDismissBehavior,
             restorationId: restorationId,

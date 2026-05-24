@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../silky_scroll_animator.dart';
 import '../silky_scroll_config.dart';
@@ -39,6 +40,7 @@ class SilkyCustomScrollView extends StatelessWidget {
     this.center,
     this.anchor = 0.0,
     this.cacheExtent,
+    this.scrollCacheExtent,
     this.semanticChildCount,
     this.dragStartBehavior = DragStartBehavior.start,
     this.keyboardDismissBehavior = ScrollViewKeyboardDismissBehavior.manual,
@@ -76,6 +78,7 @@ class SilkyCustomScrollView extends StatelessWidget {
   final Key? center;
   final double anchor;
   final double? cacheExtent;
+  final ScrollCacheExtent? scrollCacheExtent;
   final int? semanticChildCount;
   final DragStartBehavior dragStartBehavior;
   final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
@@ -87,6 +90,9 @@ class SilkyCustomScrollView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cfg = silkyConfig;
     final effectiveDirection = cfg?.direction ?? scrollDirection;
+    final effectiveScrollCacheExtent =
+        scrollCacheExtent ??
+        (cacheExtent == null ? null : ScrollCacheExtent.pixels(cacheExtent!));
 
     return SilkyScroll(
       controller: controller,
@@ -125,7 +131,7 @@ class SilkyCustomScrollView extends StatelessWidget {
           shrinkWrap: shrinkWrap,
           center: center,
           anchor: anchor,
-          cacheExtent: cacheExtent,
+          scrollCacheExtent: effectiveScrollCacheExtent,
           semanticChildCount: semanticChildCount,
           dragStartBehavior: dragStartBehavior,
           keyboardDismissBehavior: keyboardDismissBehavior,

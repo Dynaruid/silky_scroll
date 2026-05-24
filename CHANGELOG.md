@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.3
+
+### Added
+
+- Added `scrollCacheExtent` support to `SilkyListView`, `SilkyGridView`, and `SilkyCustomScrollView` presets.
+
+### Changed
+
+- Replaced internal Flutter preset calls from deprecated `cacheExtent` to `scrollCacheExtent`.
+- Raised the minimum Flutter version to `3.44.0` to match the stable release that provides `ScrollCacheExtent`.
+
 ## 2.6.2
 
 ### Added
