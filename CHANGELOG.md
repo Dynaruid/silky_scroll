@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.4
+
+### Changed
+
+- Updated `SilkyScroll.fromConfig` so runtime scroll behavior changes are applied without remounting the scroll widget.
+- Refined the config playground example to update scroll settings live and keep the demo list fully cached for smoother comparison.
+
+### Fixed
+
+- Recalculate the animator smoothing factor from the latest `silkyScrollDuration` and `decayLogFactor` values.
+
 ## 2.6.3
 
 ### Added

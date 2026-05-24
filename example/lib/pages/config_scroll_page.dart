@@ -1,7 +1,16 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:silky_scroll/silky_scroll.dart';
+
+const int _demoItemCount = 80;
+const double _tileHeight = 56;
+const double _tileVerticalMargin = 3;
+const double _tileExtent = _tileHeight + (_tileVerticalMargin * 2);
+const ScrollCacheExtent _demoListCacheExtent = ScrollCacheExtent.pixels(
+  _demoItemCount * _tileExtent,
+);
 
 /// Config-driven scrolling demo — **side-by-side comparison**.
 ///
@@ -77,10 +86,8 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
       ),
       body: Stack(
         children: [
-          // ── Side-by-side comparison (full area) ───────────────────────
           Row(
             children: [
-              // Left: SilkyScroll
               Expanded(
                 child: _ComparisonPane(
                   label: 'SilkyScroll',
@@ -93,10 +100,7 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
                   },
                 ),
               ),
-
               VerticalDivider(width: 1, color: cs.outlineVariant),
-
-              // Right: Default Flutter scroll
               Expanded(
                 child: _DefaultScrollPane(
                   label: 'Default',
@@ -105,140 +109,189 @@ class _ConfigScrollPageState extends State<ConfigScrollPage> {
               ),
             ],
           ),
+          Positioned(top: 12, left: 12, child: _buildConfigPanel(cs)),
+        ],
+      ),
+    );
+  }
 
-          // ── Floating config panel (top-left) ──────────────────────────
-          Positioned(
-            top: 12,
-            left: 12,
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              alignment: Alignment.topLeft,
-              child: Material(
-                elevation: 6,
-                borderRadius: BorderRadius.circular(14),
-                color: cs.surfaceContainerLow.withValues(alpha: 0.95),
-                clipBehavior: Clip.antiAlias,
-                child: _panelOpen
-                    ? SizedBox(
-                        width: 320,
+  Widget _buildConfigPanel(ColorScheme cs) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 8,
+        shadowColor: Colors.black.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(12),
+        color: cs.surfaceContainerLow.withValues(alpha: 0.96),
+        clipBehavior: Clip.antiAlias,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.8)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: _panelOpen
+              ? SizedBox(
+                  width: 340,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _PanelHeader(
+                        color: cs.primary,
+                        onClose: () => setState(() => _panelOpen = false),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 2, 14, 14),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Header row with collapse button
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 8, 4, 0),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.tune, size: 18, color: cs.primary),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Config',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: cs.primary,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
-                                    onPressed: () =>
-                                        setState(() => _panelOpen = false),
-                                    visualDensity: VisualDensity.compact,
-                                    tooltip: 'Collapse',
-                                  ),
-                                ],
-                              ),
+                            _SliderRow(
+                              label: 'Speed',
+                              value: _speed,
+                              min: 0.2,
+                              max: 5.0,
+                              display: '×${_speed.toStringAsFixed(1)}',
+                              onChanged: (v) => setState(() => _speed = v),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                              child: Column(
-                                children: [
-                                  _SliderRow(
-                                    label: 'Speed',
-                                    value: _speed,
-                                    min: 0.2,
-                                    max: 5.0,
-                                    display: '×${_speed.toStringAsFixed(1)}',
-                                    onChanged: (v) =>
-                                        setState(() => _speed = v),
+                            _SliderRow(
+                              label: 'Duration',
+                              value: _durationMs,
+                              min: 100,
+                              max: 3000,
+                              display: '${_durationMs.round()} ms',
+                              onChanged: (v) => setState(() => _durationMs = v),
+                            ),
+                            _SliderRow(
+                              label: 'Edge Lock',
+                              value: _edgeLockMs,
+                              min: 0,
+                              max: 2000,
+                              display: '${_edgeLockMs.round()} ms',
+                              onChanged: (v) => setState(() => _edgeLockMs = v),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                FilterChip(
+                                  label: const Text('Stretch'),
+                                  selected: _stretch,
+                                  onSelected: (v) =>
+                                      setState(() => _stretch = v),
+                                  visualDensity: VisualDensity.compact,
+                                  avatar: Icon(
+                                    _stretch ? Icons.expand : Icons.compress,
+                                    size: 17,
                                   ),
-                                  _SliderRow(
-                                    label: 'Duration',
-                                    value: _durationMs,
-                                    min: 100,
-                                    max: 3000,
-                                    display: '${_durationMs.round()} ms',
-                                    onChanged: (v) =>
-                                        setState(() => _durationMs = v),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _CurveDropdown(
+                                    value: _curveName,
+                                    options: _curveOptions.keys,
+                                    onChanged: (name) {
+                                      if (name != null) {
+                                        setState(
+                                          () => _curve = _curveOptions[name]!,
+                                        );
+                                      }
+                                    },
                                   ),
-                                  _SliderRow(
-                                    label: 'Edge Lock',
-                                    value: _edgeLockMs,
-                                    min: 0,
-                                    max: 2000,
-                                    display: '${_edgeLockMs.round()} ms',
-                                    onChanged: (v) =>
-                                        setState(() => _edgeLockMs = v),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      FilterChip(
-                                        label: const Text('Stretch'),
-                                        selected: _stretch,
-                                        onSelected: (v) =>
-                                            setState(() => _stretch = v),
-                                      ),
-                                      const Spacer(),
-                                      DropdownButton<String>(
-                                        value: _curveName,
-                                        isDense: true,
-                                        underline: const SizedBox.shrink(),
-                                        items: _curveOptions.keys
-                                            .map(
-                                              (name) => DropdownMenuItem(
-                                                value: name,
-                                                child: Text(
-                                                  name,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: (name) {
-                                          if (name != null) {
-                                            setState(
-                                              () =>
-                                                  _curve = _curveOptions[name]!,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      )
-                    : // Collapsed: small FAB-like button
-                      InkWell(
-                        onTap: () => setState(() => _panelOpen = true),
-                        borderRadius: BorderRadius.circular(14),
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Icon(Icons.tune, color: cs.primary, size: 22),
-                        ),
                       ),
-              ),
+                    ],
+                  ),
+                )
+              : InkWell(
+                  onTap: () => setState(() => _panelOpen = true),
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox.square(
+                    dimension: 44,
+                    child: Icon(Icons.tune, color: cs.primary, size: 22),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PanelHeader extends StatelessWidget {
+  const _PanelHeader({required this.color, required this.onClose});
+
+  final Color color;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 2),
+      child: Row(
+        children: [
+          Icon(Icons.tune, size: 18, color: color),
+          const SizedBox(width: 7),
+          Text(
+            'Config',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
             ),
           ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: onClose,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Collapse',
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _CurveDropdown extends StatelessWidget {
+  const _CurveDropdown({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String value;
+  final Iterable<String> options;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.42),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          isDense: true,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+          items: options
+              .map(
+                (name) => DropdownMenuItem(
+                  value: name,
+                  child: Text(name, style: const TextStyle(fontSize: 13)),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+        ),
       ),
     );
   }
@@ -268,19 +321,23 @@ class _ComparisonPane extends StatelessWidget {
         _PaneHeader(label: label, accent: accent, icon: Icons.auto_awesome),
         Expanded(
           child: SilkyScroll.fromConfig(
-            key: ValueKey(config),
             config: config,
             builder: (context, controller, physics, deviceKind) {
               if (onDeviceKindChanged != null) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  onDeviceKindChanged!(deviceKind);
+                  if (context.mounted) {
+                    onDeviceKindChanged!(deviceKind);
+                  }
                 });
               }
               return ListView.builder(
                 controller: controller,
                 physics: physics,
+                scrollCacheExtent: _demoListCacheExtent,
+                itemExtent: _tileExtent,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                itemCount: 80,
+                itemCount: _demoItemCount,
+                semanticChildCount: _demoItemCount,
                 itemBuilder: (context, index) =>
                     _ColorTile(index: index, accent: accent),
               );
@@ -309,8 +366,11 @@ class _DefaultScrollPane extends StatelessWidget {
         _PaneHeader(label: label, accent: accent, icon: Icons.compare_arrows),
         Expanded(
           child: ListView.builder(
+            scrollCacheExtent: _demoListCacheExtent,
+            itemExtent: _tileExtent,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            itemCount: 80,
+            itemCount: _demoItemCount,
+            semanticChildCount: _demoItemCount,
             itemBuilder: (context, index) =>
                 _ColorTile(index: index, accent: accent),
           ),
@@ -371,8 +431,8 @@ class _ColorTile extends StatelessWidget {
     final hue = (index * 7) % 360;
     final color = HSLColor.fromAHSL(1, hue.toDouble(), .55, .8).toColor();
     return Container(
-      height: 56,
-      margin: const EdgeInsets.symmetric(vertical: 3),
+      height: _tileHeight,
+      margin: const EdgeInsets.symmetric(vertical: _tileVerticalMargin),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
@@ -416,24 +476,46 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 72,
-          child: Text(label, style: const TextStyle(fontSize: 13)),
-        ),
-        Expanded(
-          child: Slider(value: value, min: min, max: max, onChanged: onChanged),
-        ),
-        SizedBox(
-          width: 64,
-          child: Text(
-            display,
-            textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+    final cs = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                display,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(trackHeight: 3),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

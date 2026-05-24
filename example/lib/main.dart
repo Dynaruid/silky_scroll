@@ -35,21 +35,28 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  static const _pages = <Widget>[
-    BasicScrollPage(),
-    NestedScrollPage(),
-    HorizontalScrollPage(),
-    ConfigScrollPage(),
-    SingleChildScrollViewPage(),
-  ];
+  Widget _buildCurrentPage() {
+    return switch (_currentIndex) {
+      0 => const BasicScrollPage(),
+      1 => const NestedScrollPage(),
+      2 => const HorizontalScrollPage(),
+      3 => const ConfigScrollPage(),
+      4 => const SingleChildScrollViewPage(),
+      _ => const BasicScrollPage(),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: KeyedSubtree(
+        key: ValueKey(_currentIndex),
+        child: _buildCurrentPage(),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
+          if (index == _currentIndex) return;
           setState(() => _currentIndex = index);
         },
         destinations: const [

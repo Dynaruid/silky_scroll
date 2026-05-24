@@ -26,6 +26,9 @@ class _FakeAnimatorDelegate implements SilkyScrollAnimatorDelegate {
   final Duration silkyScrollDuration = const Duration(milliseconds: 700);
 
   @override
+  final double decayLogFactor = kDefaultDecayLogFactor;
+
+  @override
   final bool isPlatformBouncingScrollPhysics;
 
   @override

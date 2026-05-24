@@ -94,7 +94,6 @@ class SilkyScrollState extends ChangeNotifier
       this,
       vsync,
       maxBounceOvershoot: _kMaxBounceOvershoot,
-      decayLogFactor: decayLogFactor,
     );
     _inputHandler = SilkyInputHandler(this);
   }
@@ -108,13 +107,14 @@ class SilkyScrollState extends ChangeNotifier
   final UniqueKey instanceKey = UniqueKey();
 
   @override
-  final Curve animationCurve;
+  Curve animationCurve;
   @override
-  final Duration silkyScrollDuration;
+  Duration silkyScrollDuration;
   @override
   bool isPlatformBouncingScrollPhysics = false;
 
-  final double decayLogFactor;
+  @override
+  double decayLogFactor;
 
   late ScrollPhysics currentScrollPhysics;
   late ScrollPhysics widgetScrollPhysics;
@@ -142,9 +142,9 @@ class SilkyScrollState extends ChangeNotifier
   @override
   final bool isVertical;
   final EdgeForwardingMode edgeForwardingMode;
-  final Duration edgeLockingDelay;
+  Duration edgeLockingDelay;
   @override
-  final double scrollSpeed;
+  double scrollSpeed;
   @override
   double futurePosition = 0;
   @override
@@ -302,6 +302,21 @@ class SilkyScrollState extends ChangeNotifier
     MouseWheelVerticalDeltaBehavior value,
   ) {
     mouseWheelVerticalDeltaBehavior = value;
+  }
+
+  /// Updates runtime scroll behavior options without recreating the scrollable.
+  void setScrollBehavior({
+    required double scrollSpeed,
+    required Duration silkyScrollDuration,
+    required Curve animationCurve,
+    required Duration edgeLockingDelay,
+    required double decayLogFactor,
+  }) {
+    this.scrollSpeed = scrollSpeed;
+    this.silkyScrollDuration = silkyScrollDuration;
+    this.animationCurve = animationCurve;
+    this.edgeLockingDelay = edgeLockingDelay;
+    this.decayLogFactor = decayLogFactor;
   }
 
   /// Updates the Shift-key state provider.

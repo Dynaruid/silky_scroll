@@ -209,6 +209,19 @@ class _SilkyScrollState extends State<SilkyScroll>
   @override
   void didUpdateWidget(covariant SilkyScroll oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.scrollSpeed != widget.scrollSpeed ||
+        oldWidget.silkyScrollDuration != widget.silkyScrollDuration ||
+        oldWidget.animationCurve != widget.animationCurve ||
+        oldWidget.edgeLockingDelay != widget.edgeLockingDelay ||
+        oldWidget.decayLogFactor != widget.decayLogFactor) {
+      silkyScrollState.setScrollBehavior(
+        scrollSpeed: widget.scrollSpeed,
+        silkyScrollDuration: widget.silkyScrollDuration,
+        animationCurve: widget.animationCurve,
+        edgeLockingDelay: widget.edgeLockingDelay,
+        decayLogFactor: widget.decayLogFactor,
+      );
+    }
     if (oldWidget.physics != widget.physics) {
       silkyScrollState.setWidgetScrollPhysics(scrollPhysics: widget.physics);
     }

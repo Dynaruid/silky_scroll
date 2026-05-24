@@ -97,6 +97,46 @@ void main() {
       );
     });
 
+    testWidgets('SilkyScroll.fromConfig updates behavior without remounting', (
+      tester,
+    ) async {
+      Future<void> pumpWithConfig(SilkyScrollConfig config) {
+        return tester.pumpWidget(
+          MaterialApp(
+            home: SilkyScroll.fromConfig(
+              config: config,
+              builder: (context, controller, physics, _) => ListView(
+                controller: controller,
+                physics: physics,
+                children: const [SizedBox(height: 100)],
+              ),
+            ),
+          ),
+        );
+      }
+
+      await pumpWithConfig(const SilkyScrollConfig(scrollSpeed: 1.0));
+      final state = tester.state(find.byType(SilkyScroll)) as dynamic;
+      final silkyState = state.silkyScrollState as dynamic;
+
+      await pumpWithConfig(
+        const SilkyScrollConfig(
+          scrollSpeed: 3.0,
+          silkyScrollDuration: Duration(milliseconds: 400),
+          animationCurve: Curves.linear,
+          edgeLockingDelay: Duration(milliseconds: 250),
+          decayLogFactor: 18,
+        ),
+      );
+
+      expect(tester.state(find.byType(SilkyScroll)), same(state));
+      expect(silkyState.scrollSpeed, 3.0);
+      expect(silkyState.silkyScrollDuration, const Duration(milliseconds: 400));
+      expect(silkyState.animationCurve, Curves.linear);
+      expect(silkyState.edgeLockingDelay, const Duration(milliseconds: 250));
+      expect(silkyState.decayLogFactor, 18);
+    });
+
     testWidgets('mouseWheelVerticalDeltaBehavior defaults to forward-or-self', (
       tester,
     ) async {

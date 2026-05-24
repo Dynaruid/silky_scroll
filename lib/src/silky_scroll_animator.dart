@@ -21,6 +21,8 @@ abstract interface class SilkyScrollAnimatorDelegate {
 
   Duration get silkyScrollDuration;
 
+  double get decayLogFactor;
+
   bool get isPlatformBouncingScrollPhysics;
 
   double get futurePosition;
@@ -66,23 +68,20 @@ final class SilkyScrollAnimator {
     this._delegate,
     TickerProvider vsync, {
     required this.maxBounceOvershoot,
-    this.decayLogFactor = kDefaultDecayLogFactor,
-  }) : _smoothingFactor =
-           decayLogFactor /
-           (_delegate.silkyScrollDuration.inMilliseconds / 1000.0) {
+  }) {
     _ticker = vsync.createTicker(_onTick);
   }
 
   final SilkyScrollAnimatorDelegate _delegate;
   final double maxBounceOvershoot;
 
-  /// Used to derive an exponential-decay rate from [silkyScrollDuration].
-  /// Higher values make the scroll converge faster toward [futurePosition].
-  final double decayLogFactor;
-
   /// Exponential decay rate derived from [silkyScrollDuration].
   /// Higher values → faster convergence to [futurePosition].
-  final double _smoothingFactor;
+  double get _smoothingFactor {
+    final durationSeconds =
+        _delegate.silkyScrollDuration.inMilliseconds / 1000.0;
+    return _delegate.decayLogFactor / durationSeconds;
+  }
 
   late final Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
